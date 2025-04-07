@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+
+<odoo>
+
+    <record id="residencia_action" model="ir.actions.act_window">
+        <field name="name">Residencias</field>
+        <field name="res_model">asovec.residencia</field>
+        <field name="view_mode">tree,form,kanban</field>
+    </record>
+
+    <menuitem name="Asociacion de Vecinos" id="asovec_menu"/>
+    <menuitem name="Asociacion"  id="asociacion_menu" parent="asovec_menu" />
+    <menuitem name="Residencias" id="residencia_opcion" parent="asociacion_menu" action="residencia_action"/>
+
+    <menuitem name="Mantenimientos" id="mantenimientos_menu" parent="asovec_menu" />
+    <menuitem name="Residentes" id="clientes_opcion" parent="mantenimientos_menu" action="account.res_partner_action_customer"/>
+    <menuitem name="Servicios" id="productos_opcion" parent="mantenimientos_menu" action="account.product_product_action_sellable"/>
+
+
+    <menuitem name="Procesos" id="proceso_menu" parent="asovec_menu" />
+    
+
+    <menuitem name="Informes" id="informe_menu" parent="asovec_menu" />
+    
+
+
+
+</odoo>
