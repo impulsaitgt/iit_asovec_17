@@ -11,6 +11,11 @@
             <tree string="Contadores" default_order="active desc,id desc">
                 <field name="name"/>
                 <field name="residencia_id"/>
+
+                <!-- NUEVOS -->
+                <field name="cliente_id" readonly="1"/>
+                <field name="proyecto_aso_id" readonly="1"/>
+
                 <field name="active"/>
                 <field name="ultima_fecha"/>
                 <field name="ultima_lectura"/>
@@ -28,7 +33,6 @@
         <field name="arch" type="xml">
             <form string="Contador">
                 <header>
-                    <!-- NUEVO BOTON ARRIBA -->
                     <button name="action_nueva_lectura" type="object" string="Nueva Lectura" class="btn-primary"/>
 
                     <button name="action_activar" type="object" string="Activar" class="btn-secondary" invisible="active"/>
@@ -41,6 +45,10 @@
                         <group>
                             <field name="name"/>
                             <field name="residencia_id" required="1"/>
+
+                            <!-- NUEVOS -->
+                            <field name="cliente_id" readonly="1"/>
+                            <field name="proyecto_aso_id" readonly="1"/>
                         </group>
                         <group string="Resumen" colspan="2">
                             <field name="ultima_fecha" readonly="1"/>
@@ -51,7 +59,6 @@
 
                     <notebook>
                         <page string="Lecturas">
-                            <!-- SIN "Agregar una línea" -->
                             <field name="line_ids"
                                    context="{'default_contador_id': active_id}"
                                    create="0" edit="0" delete="0"
@@ -61,6 +68,9 @@
                                     <field name="lectura"/>
                                     <field name="lectura_anterior" readonly="1"/>
                                     <field name="consumo" readonly="1"/>
+
+                                    <field name="cliente_id" readonly="1" optional="hide"/>
+                                    <field name="proyecto_aso_id" readonly="1" optional="hide"/>
 
                                     <field name="base" readonly="1"/>
                                     <field name="metros_extras" readonly="1"/>
@@ -78,6 +88,16 @@
                                             <group>
                                                 <field name="lectura_anterior" readonly="1"/>
                                                 <field name="consumo" readonly="1"/>
+                                            </group>
+                                        </group>
+
+                                        <group string="Residencia">
+                                            <group>
+                                                <field name="residencia_id" readonly="1"/>
+                                                <field name="cliente_id" readonly="1"/>
+                                            </group>
+                                            <group>
+                                                <field name="proyecto_aso_id" readonly="1"/>
                                             </group>
                                         </group>
 
@@ -111,6 +131,8 @@
             <tree string="Lecturas" default_order="fecha_lectura desc,id desc">
                 <field name="contador_id"/>
                 <field name="residencia_id"/>
+                <field name="cliente_id" readonly="1" optional="hide"/>
+                <field name="proyecto_aso_id" readonly="1" optional="hide"/>
                 <field name="fecha_lectura"/>
                 <field name="lectura"/>
                 <field name="lectura_anterior"/>
@@ -137,6 +159,8 @@
                         <group>
                             <field name="contador_id" required="1"/>
                             <field name="residencia_id" readonly="1"/>
+                            <field name="cliente_id" readonly="1"/>
+                            <field name="proyecto_aso_id" readonly="1"/>
                             <field name="fecha_lectura" required="1"/>
                         </group>
                         <group>

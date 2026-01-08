@@ -11,6 +11,9 @@ class Contador(models.Model):
     name = fields.Char(string="Contador", required=True)
     active = fields.Boolean(string="Activo", default=True)
     residencia_id = fields.Many2one('asovec.residencia', string="Residencia", required=True, ondelete='cascade', index=True)
+    cliente_id = fields.Many2one(comodel_name='res.partner', string="Contacto", related='residencia_id.cliente_id', readonly=True, store=False)
+    proyecto_aso_id = fields.Many2one(comodel_name='asovec.proyecto_aso', string="Proyecto", related='residencia_id.proyecto_aso_id', readonly=True, store=False)
+
     line_ids = fields.One2many('asovec.contador.lines', 'contador_id', string='Lecturas')
 
     ultima_lectura = fields.Float(string="Última lectura", compute="_compute_ultima", readonly=True)
@@ -81,6 +84,9 @@ class ContadorLine(models.Model):
 
     contador_id = fields.Many2one('asovec.contador', string="Contador", required=True, ondelete='cascade', index=True)
     residencia_id = fields.Many2one('asovec.residencia', related='contador_id.residencia_id', store=True, readonly=True)
+    cliente_id = fields.Many2one(comodel_name='res.partner', string="Contacto", related='residencia_id.cliente_id', store=True, readonly=True)
+    proyecto_aso_id = fields.Many2one(comodel_name='asovec.proyecto_aso', string="Proyecto", related='residencia_id.proyecto_aso_id', store=True, readonly=True)
+
     fecha_lectura = fields.Date(string="Fecha de lectura", required=True, default=fields.Date.context_today, index=True)
     lectura = fields.Float(string="Lectura actual", required=True, default=0.0)
 
