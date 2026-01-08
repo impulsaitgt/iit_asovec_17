@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===================== -->
+    <!--  CONTADOR - TREE      -->
+    <!-- ===================== -->
+    <record id="asovec_contador_tree_view" model="ir.ui.view">
+        <field name="name">asovec.contador.tree</field>
+        <field name="model">asovec.contador</field>
+        <field name="arch" type="xml">
+            <tree string="Contadores" default_order="active desc,id desc">
+                <field name="name"/>
+                <field name="residencia_id"/>
+                <field name="active"/>
+                <field name="ultima_fecha"/>
+                <field name="ultima_lectura"/>
+                <field name="ultimo_consumo"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ===================== -->
+    <!--  CONTADOR - FORM      -->
+    <!-- ===================== -->
+    <record id="asovec_contador_form_view" model="ir.ui.view">
+        <field name="name">asovec.contador.form</field>
+        <field name="model">asovec.contador</field>
+        <field name="arch" type="xml">
+            <form string="Contador">
+                <header>
+                    <!-- NUEVO BOTON ARRIBA -->
+                    <button name="action_nueva_lectura" type="object" string="Nueva Lectura" class="btn-primary"/>
+
+                    <button name="action_activar" type="object" string="Activar" class="btn-secondary" invisible="active"/>
+                    <button name="action_desactivar" type="object" string="Desactivar" class="btn-secondary" invisible="not active"/>
+                    <field name="active" widget="boolean_toggle"/>
+                </header>
+
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="residencia_id" required="1"/>
+                        </group>
+                        <group string="Resumen" colspan="2">
+                            <field name="ultima_fecha" readonly="1"/>
+                            <field name="ultima_lectura" readonly="1"/>
+                            <field name="ultimo_consumo" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Lecturas">
+                            <!-- SIN "Agregar una línea" -->
+                            <field name="line_ids"
+                                   context="{'default_contador_id': active_id}"
+                                   create="0" edit="0" delete="0"
+                                   mode="tree,form">
+                                <tree default_order="fecha_lectura desc,id desc">
+                                    <field name="fecha_lectura"/>
+                                    <field name="lectura"/>
+                                    <field name="lectura_anterior" readonly="1"/>
+                                    <field name="consumo" readonly="1"/>
+
+                                    <field name="base" readonly="1"/>
+                                    <field name="metros_extras" readonly="1"/>
+                                    <field name="pago_extra" readonly="1"/>
+                                    <field name="pago_total" readonly="1"/>
+                                </tree>
+
+                                <form string="Lectura">
+                                    <sheet>
+                                        <group>
+                                            <group>
+                                                <field name="fecha_lectura"/>
+                                                <field name="lectura" autofocus="1"/>
+                                            </group>
+                                            <group>
+                                                <field name="lectura_anterior" readonly="1"/>
+                                                <field name="consumo" readonly="1"/>
+                                            </group>
+                                        </group>
+
+                                        <group string="Cobro">
+                                            <group>
+                                                <field name="base" readonly="1"/>
+                                                <field name="metros_extras" readonly="1"/>
+                                            </group>
+                                            <group>
+                                                <field name="pago_extra" readonly="1"/>
+                                                <field name="pago_total" readonly="1"/>
+                                            </group>
+                                        </group>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===================== -->
+    <!--  LECTURAS - TREE      -->
+    <!-- ===================== -->
+    <record id="asovec_contador_lines_tree_view" model="ir.ui.view">
+        <field name="name">asovec.contador.lines.tree</field>
+        <field name="model">asovec.contador.lines</field>
+        <field name="arch" type="xml">
+            <tree string="Lecturas" default_order="fecha_lectura desc,id desc">
+                <field name="contador_id"/>
+                <field name="residencia_id"/>
+                <field name="fecha_lectura"/>
+                <field name="lectura"/>
+                <field name="lectura_anterior"/>
+                <field name="consumo"/>
+
+                <field name="base"/>
+                <field name="metros_extras"/>
+                <field name="pago_extra"/>
+                <field name="pago_total"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ===================== -->
+    <!--  LECTURAS - FORM      -->
+    <!-- ===================== -->
+    <record id="asovec_contador_lines_form_view" model="ir.ui.view">
+        <field name="name">asovec.contador.lines.form</field>
+        <field name="model">asovec.contador.lines</field>
+        <field name="arch" type="xml">
+            <form string="Lectura">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="contador_id" required="1"/>
+                            <field name="residencia_id" readonly="1"/>
+                            <field name="fecha_lectura" required="1"/>
+                        </group>
+                        <group>
+                            <field name="lectura" required="1" autofocus="1"/>
+                            <field name="lectura_anterior" readonly="1"/>
+                            <field name="consumo" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Cobro">
+                        <group>
+                            <field name="base" readonly="1"/>
+                            <field name="metros_extras" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="pago_extra" readonly="1"/>
+                            <field name="pago_total" readonly="1"/>
+                        </group>
+                    </group>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo>
