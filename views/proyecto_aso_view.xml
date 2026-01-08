@@ -8,6 +8,14 @@
         <field name="arch" type="xml">
             <form string="Proyecto">
                 <sheet>
+                    <field name="residencia_count" invisible="1" />
+
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" name="action_ver_residencias" class="oe_stat_button"
+                            icon="fa-home">
+                            <field name="residencia_count" widget="statinfo" string="Residencias" />
+                        </button>
+                    </div>
                     <group>
                         <field name="name" placeholder="Nombre" />
                     </group>

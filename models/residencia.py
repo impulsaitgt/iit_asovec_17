@@ -13,10 +13,44 @@ class Residencia(models.Model):
     cliente_id = fields.Many2one(comodel_name='res.partner', string="Contacto", required=False)
     residencia_lines = fields.One2many(comodel_name="asovec.residencia.lines", inverse_name="residencia_id")
     contadores_ids = fields.One2many(comodel_name='asovec.contador', inverse_name='residencia_id', string='Contadores')
+    contador_count = fields.Integer(string="Contadores", compute="_compute_contador_count")
+    lectura_count = fields.Integer(string="Lecturas", compute="_compute_lectura_count")
 
     _sql_constraints = [
         ('referencia_unica', 'unique(name)', "Esta residencia ya existe, por favor especifica otro Nombre/Codigo")
     ]
+
+    def _compute_contador_count(self):
+        Contador = self.env['asovec.contador'].sudo()
+        for rec in self:
+            rec.contador_count = Contador.search_count([('residencia_id', '=', rec.id)])
+
+    def _compute_lectura_count(self):
+        Line = self.env['asovec.contador.lines'].sudo()
+        for rec in self:
+            rec.lectura_count = Line.search_count([('residencia_id', '=', rec.id)])
+
+    def action_ver_contadores(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Contadores',
+            'res_model': 'asovec.contador',
+            'view_mode': 'tree,form',
+            'domain': [('residencia_id', '=', self.id)],
+            'context': {'default_residencia_id': self.id},
+        }
+
+    def action_ver_lecturas(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Lecturas',
+            'res_model': 'asovec.contador.lines',
+            'view_mode': 'tree,form',
+            'domain': [('residencia_id', '=', self.id)],
+            'context': {'default_residencia_id': self.id},
+        }
 
     def action_nueva_lectura(self):
         self.ensure_one()
