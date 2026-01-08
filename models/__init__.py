@@ -1,0 +1,1 @@
+from . import residencia, proyecto_aso, product_template

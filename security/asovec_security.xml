@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+
+<odoo>
+    <record id="categoria_modulo_asovec" model="ir.module.category">
+        <field name="name">Asociacion de Vecinos</field>
+    </record>
+    <record id="asovec_group_administrador" model="res.groups">
+        <field name="name">Administrador Asociacion de Vecinos</field>
+        <field name="category_id" ref="categoria_modulo_asovec"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    
+</odoo>

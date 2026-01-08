@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+
+<odoo>
+    <!--Vista formulario -->
+    <record id="residencia_form_view" model="ir.ui.view">
+        <field name="name">residencia.form.view</field>
+        <field name="model">asovec.residencia</field>
+        <field name="arch" type="xml">
+            <form string="Residencia">
+                <sheet>
+                    <group>
+                        <field name="name" placeholder="Nombre/Codigo" />
+                    </group>
+                    <group>
+                        <field name="direccion" placeholder="Direccion" />
+                        <field name="cliente_id" />
+                        <field name="proyecto_aso_id" />
+                        <field name="detalle" widget="text" placeholder="Escribe aquí..." />
+                    </group>
+                    <notebook>
+                        <page string="Servicios relacionados" name="servicios_relacionados">
+                            <field name="residencia_lines" mode="tree,kanban">
+                                <tree editable="bottom" string="Servicios">
+                                    <control>
+                                        <create string="Agrega Servicio" />
+                                    </control>
+                                    <field name="producto_id" />
+                                    <field name="precio" />
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <!--Vista
+    de arbol-->
+    <record id="residencia_tree_view" model="ir.ui.view">
+        <field name="name">residencia.tree.view"></field>
+        <field name="model">asovec.residencia</field>
+        <field name="arch" type="xml">
+            <tree string="Residencias">
+                <field name="name" />
+                <field name="direccion" />
+                <field name="detalle" />
+                <field name="cliente_id" />
+                <field name="proyecto_aso_id" />
+            </tree>
+        </field>
+    </record>
+</odoo>

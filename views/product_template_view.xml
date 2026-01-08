@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+
+<odoo>
+    <record id="product_template_form_ihnerit_aso" model="ir.ui.view">
+        <field name="name">product.template.view.aso.inherited</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+        <field name="categ_id" position="after">
+            <field name="aso_es_servicio_aso"/>
+         </field>
+        </field>
+    </record>
+</odoo>
