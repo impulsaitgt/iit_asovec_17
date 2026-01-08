@@ -12,7 +12,6 @@
                 <field name="name"/>
                 <field name="residencia_id"/>
 
-                <!-- NUEVOS -->
                 <field name="cliente_id" readonly="1"/>
                 <field name="proyecto_aso_id" readonly="1"/>
 
@@ -33,7 +32,10 @@
         <field name="arch" type="xml">
             <form string="Contador">
                 <header>
+                    <field name="tiene_inicial" invisible="1"/>
+
                     <button name="action_nueva_lectura" type="object" string="Nueva Lectura" class="btn-primary"/>
+                    <button name="action_registro_inicial" type="object" string="Registro Inicial"  class="btn-secondary" invisible="tiene_inicial"/>
 
                     <button name="action_activar" type="object" string="Activar" class="btn-secondary" invisible="active"/>
                     <button name="action_desactivar" type="object" string="Desactivar" class="btn-secondary" invisible="not active"/>
@@ -46,7 +48,6 @@
                             <field name="name"/>
                             <field name="residencia_id" required="1"/>
 
-                            <!-- NUEVOS -->
                             <field name="cliente_id" readonly="1"/>
                             <field name="proyecto_aso_id" readonly="1"/>
                         </group>
@@ -63,8 +64,12 @@
                                    context="{'default_contador_id': active_id}"
                                    create="0" edit="0" delete="0"
                                    mode="tree,form">
-                                <tree default_order="fecha_lectura desc,id desc">
-                                    <field name="fecha_lectura"/>
+                                <tree default_order="periodo_date desc,id desc">
+                                    <field name="es_inicial" optional="hide"/>
+
+                                    <field name="mes" invisible="es_inicial"/>
+                                    <field name="anio" invisible="es_inicial"/>
+
                                     <field name="lectura"/>
                                     <field name="lectura_anterior" readonly="1"/>
                                     <field name="consumo" readonly="1"/>
@@ -82,7 +87,9 @@
                                     <sheet>
                                         <group>
                                             <group>
-                                                <field name="fecha_lectura"/>
+                                                <field name="es_inicial"/>
+                                                <field name="mes" invisible="es_inicial"/>
+                                                <field name="anio" invisible="es_inicial"/>
                                                 <field name="lectura" autofocus="1"/>
                                             </group>
                                             <group>
@@ -122,18 +129,60 @@
     </record>
 
     <!-- ===================== -->
+    <!--  CONTADOR - SEARCH    -->
+    <!-- ===================== -->
+    <record id="asovec_contador_search_view" model="ir.ui.view">
+        <field name="name">asovec.contador.search</field>
+        <field name="model">asovec.contador</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Contadores">
+                <!-- Quick search -->
+                <field name="name"/>
+                <field name="residencia_id"/>
+                <field name="proyecto_aso_id"/>
+                <field name="cliente_id"/>
+
+                <separator/>
+
+                <!-- Filters -->
+                <filter string="Activos" name="activos" domain="[('active','=',True)]"/>
+                <filter string="Inactivos" name="inactivos" domain="[('active','=',False)]"/>
+                <filter string="Con inicial" name="con_inicial" domain="[('tiene_inicial','=',True)]"/>
+
+                <separator/>
+
+                <!-- Group By -->
+                <group expand="0" string="Agrupar por">
+                    <filter string="Residencia" name="group_residencia"
+                            context="{'group_by':'residencia_id'}"/>
+                    <filter string="Proyecto" name="group_proyecto"
+                            context="{'group_by':'proyecto_aso_id'}"/>
+                    <filter string="Contacto" name="group_contacto"
+                            context="{'group_by':'cliente_id'}"/>
+                    <filter string="Activo" name="group_active"
+                            context="{'group_by':'active'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ===================== -->
     <!--  LECTURAS - TREE      -->
     <!-- ===================== -->
     <record id="asovec_contador_lines_tree_view" model="ir.ui.view">
         <field name="name">asovec.contador.lines.tree</field>
         <field name="model">asovec.contador.lines</field>
         <field name="arch" type="xml">
-            <tree string="Lecturas" default_order="fecha_lectura desc,id desc">
+            <tree string="Lecturas" default_order="periodo_date desc,id desc">
                 <field name="contador_id"/>
                 <field name="residencia_id"/>
                 <field name="cliente_id" readonly="1" optional="hide"/>
                 <field name="proyecto_aso_id" readonly="1" optional="hide"/>
-                <field name="fecha_lectura"/>
+
+                <field name="es_inicial" optional="hide"/>
+                <field name="mes" invisible="es_inicial"/>
+                <field name="anio" invisible="es_inicial"/>
+
                 <field name="lectura"/>
                 <field name="lectura_anterior"/>
                 <field name="consumo"/>
@@ -161,7 +210,10 @@
                             <field name="residencia_id" readonly="1"/>
                             <field name="cliente_id" readonly="1"/>
                             <field name="proyecto_aso_id" readonly="1"/>
-                            <field name="fecha_lectura" required="1"/>
+
+                            <field name="es_inicial"/>
+                            <field name="mes" invisible="es_inicial"/>
+                            <field name="anio" invisible="es_inicial"/>
                         </group>
                         <group>
                             <field name="lectura" required="1" autofocus="1"/>
@@ -183,6 +235,41 @@
 
                 </sheet>
             </form>
+        </field>
+    </record>
+
+     <!-- ===================== -->
+    <!--  LECTURAS - SEARCH    -->
+    <!-- ===================== -->
+    <record id="asovec_contador_lines_search_view" model="ir.ui.view">
+        <field name="name">asovec.contador.lines.search</field>
+        <field name="model">asovec.contador.lines</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Lecturas">
+                <!-- Quick search -->
+                <field name="contador_id"/>
+                <field name="residencia_id"/>
+                <field name="proyecto_aso_id"/>
+                <field name="cliente_id"/>
+
+                <separator/>
+
+                <!-- Filters -->
+                <filter string="Mensuales" name="mensuales" domain="[('es_inicial','=',False)]"/>
+                <filter string="Inicial" name="inicial" domain="[('es_inicial','=',True)]"/>
+
+                <separator/>
+
+                <!-- Group By -->
+                <group expand="0" string="Agrupar por">
+                    <filter string="Residencia" name="group_residencia"
+                            context="{'group_by':'residencia_id'}"/>
+                    <filter string="Proyecto" name="group_proyecto"
+                            context="{'group_by':'proyecto_aso_id'}"/>
+                    <filter string="Contador" name="group_contador"
+                            context="{'group_by':'contador_id'}"/>
+                </group>
+            </search>
         </field>
     </record>
 

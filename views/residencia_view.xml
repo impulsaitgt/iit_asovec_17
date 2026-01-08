@@ -7,10 +7,24 @@
         <field name="arch" type="xml">
             <form string="Residencia">
                 <header>
-                    <button name="action_nueva_lectura" type="object" string="Nueva Lectura" class="btn-primary"/>
+                    <button name="action_nueva_lectura" type="object" string="Nueva Lectura"
+                        class="btn-primary" />
                 </header>
 
                 <sheet>
+                    <field name="contador_count" invisible="1" />
+                    <field name="lectura_count" invisible="1" />
+
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" name="action_ver_contadores" class="oe_stat_button"
+                            icon="fa-tachometer">
+                            <field name="contador_count" widget="statinfo" string="Contadores" />
+                        </button>
+                        <button type="object" name="action_ver_lecturas" class="oe_stat_button"
+                            icon="fa-list">
+                            <field name="lectura_count" widget="statinfo" string="Lecturas" />
+                        </button>
+                    </div>
                     <group>
                         <field name="name" placeholder="Nombre/Codigo" />
                     </group>
@@ -38,7 +52,8 @@
         </field>
     </record>
 
-    <!--Vista de arbol-->
+    <!--Vista
+    de arbol-->
     <record id="residencia_tree_view" model="ir.ui.view">
         <field name="name">residencia.tree.view"></field>
         <field name="model">asovec.residencia</field>
@@ -50,6 +65,41 @@
                 <field name="cliente_id" />
                 <field name="proyecto_aso_id" />
             </tree>
+        </field>
+    </record>
+
+    <!-- ===================== -->
+    <!--  RESIDENCIA - SEARCH  -->
+    <!-- ===================== -->
+    <record id="asovec_residencia_search_view" model="ir.ui.view">
+        <field name="name">asovec.residencia.search</field>
+        <field name="model">asovec.residencia</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Residencias">
+                <!-- Quick search -->
+                <field name="name" />
+                <field name="direccion" />
+                <field name="cliente_id" />
+                <field name="proyecto_aso_id" />
+
+                <separator />
+
+                <!-- Filters -->
+                <filter string="Con contadores" name="con_contadores"
+                    domain="[('contadores_ids','!=',False)]" />
+                <filter string="Sin contadores" name="sin_contadores"
+                    domain="[('contadores_ids','=',False)]" />
+
+                <separator />
+
+                <!-- Group By -->
+                <group expand="0" string="Agrupar por">
+                    <filter string="Proyecto" name="group_proyecto"
+                        context="{'group_by':'proyecto_aso_id'}" />
+                    <filter string="Contacto" name="group_contacto"
+                        context="{'group_by':'cliente_id'}" />
+                </group>
+            </search>
         </field>
     </record>
 </odoo>
