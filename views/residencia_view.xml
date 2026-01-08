@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-
 <odoo>
     <!--Vista formulario -->
     <record id="residencia_form_view" model="ir.ui.view">
@@ -7,6 +6,10 @@
         <field name="model">asovec.residencia</field>
         <field name="arch" type="xml">
             <form string="Residencia">
+                <header>
+                    <button name="action_nueva_lectura" type="object" string="Nueva Lectura" class="btn-primary"/>
+                </header>
+
                 <sheet>
                     <group>
                         <field name="name" placeholder="Nombre/Codigo" />
@@ -34,8 +37,8 @@
             </form>
         </field>
     </record>
-    <!--Vista
-    de arbol-->
+
+    <!--Vista de arbol-->
     <record id="residencia_tree_view" model="ir.ui.view">
         <field name="name">residencia.tree.view"></field>
         <field name="model">asovec.residencia</field>

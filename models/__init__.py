@@ -1,1 +1,1 @@
-from . import residencia, proyecto_aso, product_template
+from . import residencia, proyecto_aso, product_template, contador

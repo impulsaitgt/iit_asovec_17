@@ -14,12 +14,30 @@
         <field name="view_mode">tree,form,kanban</field>
     </record>
 
+    <record id="contador_action" model="ir.actions.act_window">
+        <field name="name">Contadores</field>
+        <field name="res_model">asovec.contador</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="contador_line_action" model="ir.actions.act_window">
+        <field name="name">Lecturas</field>
+        <field name="res_model">asovec.contador.lines</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+
+
     <menuitem name="Asociacion de Vecinos" id="asovec_menu"/>
-    <menuitem name="Asociacion"  id="asociacion_menu" parent="asovec_menu" />
+    <menuitem name="Asociacion"  id="asociacion_menu" parent="asovec_menu" sequence="10"/>
     <menuitem name="Proyectos" id="proyecto_aso_opcion" parent="asociacion_menu" action="proyecto_aso_action"/>
     <menuitem name="Residencias" id="residencia_opcion" parent="asociacion_menu" action="residencia_action"/>
 
-    <menuitem name="Mantenimientos" id="mantenimientos_menu" parent="asovec_menu" />
+    <menuitem name="Contadores"  id="contadores_menu" parent="asovec_menu" sequence="20"/>
+    <menuitem name="Contadores" id="contador_opcion" parent="contadores_menu" action="contador_action"/>
+    <menuitem name="Lecturas de Contador" id="contador_line_opcion" parent="contadores_menu" action="contador_line_action"/>
+
+    <menuitem name="Mantenimientos" id="mantenimientos_menu" parent="asovec_menu" sequence="30"/>
     <menuitem name="Residentes" id="clientes_opcion" parent="mantenimientos_menu" action="account.res_partner_action_customer"/>
     <menuitem name="Servicios" id="productos_opcion" parent="mantenimientos_menu" action="account.product_product_action_sellable"/>
 
