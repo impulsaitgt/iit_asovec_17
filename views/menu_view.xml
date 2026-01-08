@@ -2,6 +2,12 @@
 
 <odoo>
 
+    <record id="proyecto_aso_action" model="ir.actions.act_window">
+        <field name="name">Proyectos</field>
+        <field name="res_model">asovec.proyecto_aso</field>
+        <field name="view_mode">tree,form,kanban</field>
+    </record>
+
     <record id="residencia_action" model="ir.actions.act_window">
         <field name="name">Residencias</field>
         <field name="res_model">asovec.residencia</field>
@@ -10,6 +16,7 @@
 
     <menuitem name="Asociacion de Vecinos" id="asovec_menu"/>
     <menuitem name="Asociacion"  id="asociacion_menu" parent="asovec_menu" />
+    <menuitem name="Proyectos" id="proyecto_aso_opcion" parent="asociacion_menu" action="proyecto_aso_action"/>
     <menuitem name="Residencias" id="residencia_opcion" parent="asociacion_menu" action="residencia_action"/>
 
     <menuitem name="Mantenimientos" id="mantenimientos_menu" parent="asovec_menu" />

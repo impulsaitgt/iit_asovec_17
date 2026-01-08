@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+
+<odoo>
+    <!--Vista formulario -->
+    <record id="proyecto_aso_form_view" model="ir.ui.view">
+        <field name="name">proyecto_aso.form.view</field>
+        <field name="model">asovec.proyecto_aso</field>
+        <field name="arch" type="xml">
+            <form string="Proyecto">
+                <sheet>
+                    <group>
+                        <field name="name" placeholder="Nombre" />
+                    </group>
+                    <group>
+                        <group>
+                            <field name="direccion" placeholder="Direccion" />
+                            <field name="detalle" widget="text" placeholder="Escribe aquí..." />
+                        </group>
+                        <group>
+                            <field name="cobro_base" placeholder="Cobro Base" />
+                            <field name="precio_metro"
+                                placeholder="Precio por Metro (puedes cambiar esto a lotes especificos)" />
+                            <field name="metro_base"
+                                placeholder="Metros de agua a los que se tienen derecho" />
+                            <field name="cobro_inactivas" placeholder="Cobro fijo por inactividad" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <!--Vista
+    de arbol-->
+    <record id="proyecto_aso_tree_view" model="ir.ui.view">
+        <field name="name">proyecto_aso.tree.view"></field>
+        <field name="model">asovec.proyecto_aso</field>
+        <field name="arch" type="xml">
+            <tree string="Proyectos">
+                <field name="name" />
+                <field name="direccion" />
+                <field name="detalle" />
+                <field name="cobro_base" />
+                <field name="precio_metro" />
+                <field name="metro_base" />
+                <field name="cobro_inactivas" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="proyecto_aso_kanban_view" model="ir.ui.view">
+        <field name="name">proyecto_aso.kanban.view</field>
+        <field name="model">asovec.proyecto_aso</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_small_column">
+                <!-- Campos disponibles dentro del template -->
+                <field name="name" />
+                <field name="direccion" />
+                <field name="detalle" />
+                <field name="cobro_base" />
+                <field name="precio_metro" />
+                <field name="metro_base" />
+                <field name="cobro_inactivas" />
+
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click o_kanban_card">
+                            <div class="o_kanban_card_header">
+                                <div class="o_kanban_title">
+                                    <strong>
+                                        <field name="name" />
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="o_kanban_card_content">
+                                <t t-if="record.direccion.raw_value">
+                                    <div class="text-muted">
+                                        <i class="fa fa-map-marker me-1" />
+                                        <field name="direccion" />
+                                    </div>
+                                </t>
+
+                                <t t-if="record.detalle.raw_value">
+                                    <div class="mt-2">
+                                        <field name="detalle" />
+                                    </div>
+                                </t>
+
+                                <div class="mt-3">
+                                    <div class="o_row">
+                                        <span class="text-muted">Cobro base:</span>
+                                        <span class="ms-1">
+                                            <field name="cobro_base" />
+                                        </span>
+                                    </div>
+                                    <div class="o_row">
+                                        <span class="text-muted">Precio/metro:</span>
+                                        <span class="ms-1">
+                                            <field name="precio_metro" />
+                                        </span>
+                                    </div>
+                                    <div class="o_row">
+                                        <span class="text-muted">Metro base:</span>
+                                        <span class="ms-1">
+                                            <field name="metro_base" />
+                                        </span>
+                                    </div>
+                                    <div class="o_row">
+                                        <span class="text-muted">Inactivas:</span>
+                                        <span class="ms-1">
+                                            <field name="cobro_inactivas" />
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+</odoo>
