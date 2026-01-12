@@ -147,10 +147,13 @@ class ContadorLine(models.Model):
     lectura_anterior = fields.Float(string="Lectura anterior", default=0.0, readonly=True)
     consumo = fields.Float(string="Consumo", default=0.0, readonly=True)
 
-    base = fields.Float(string="Base", default=0.0, readonly=True)
+    company_id = fields.Many2one("res.company", string="Compañía", required=True, default=lambda self: self.env.company, index=True)
+    currency_id = fields.Many2one("res.currency", string="Moneda", related="company_id.currency_id", store=True, readonly=True)
+
+    base = fields.Monetary(string="Base", default=0.0, currency_field="currency_id", readonly=True)
     metros_extras = fields.Float(string="Metros extras", default=0.0, readonly=True)
-    pago_extra = fields.Float(string="Pago extra", default=0.0, readonly=True)
-    pago_total = fields.Float(string="Pago total", default=0.0, readonly=True)
+    pago_extra = fields.Monetary(string="Pago extra", default=0.0, currency_field="currency_id", readonly=True)
+    pago_total = fields.Monetary(string="Pago total", default=0.0, currency_field="currency_id", readonly=True)
 
     @api.depends('mes', 'anio', 'es_inicial')
     def _compute_periodo_date(self):

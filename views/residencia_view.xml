@@ -43,6 +43,7 @@
                                         <create string="Agrega Servicio" />
                                     </control>
                                     <field name="producto_id" />
+                                    <field name="currency_id" invisible="1"/>
                                     <field name="precio" />
                                 </tree>
                             </field>

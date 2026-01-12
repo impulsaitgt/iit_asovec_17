@@ -7,19 +7,20 @@
         <field name="model">asovec.proyecto_cobro_mensual</field>
         <field name="arch" type="xml">
             <tree string="Cobros mensuales" default_order="year desc, month desc">
-                <field name="name"/>
-                <field name="project_id"/>
-                <field name="month"/>
-                <field name="year"/>
-                <field name="total_to_charge"/>
-                <field name="total_paid_dummy"/>
-                <field name="total_balance"/>
-                <field name="state" string="Estado" 
-                           widget="badge" 
-                           decoration-danger="state == 'cancel'" 
-                           decoration-success="state == 'posted'" 
-                           decoration-muted="state == 'draft'" 
-                           optional="hide"/>
+                <field name="name" />
+                <field name="proyecto_aso_id" />
+                <field name="month" />
+                <field name="currency_id" invisible="1"/>
+                <field name="year" />
+                <field name="total_to_charge" />
+                <field name="total_paid_dummy" />
+                <field name="total_balance" />
+                <field name="state" string="Estado"
+                    widget="badge"
+                    decoration-danger="state == 'cancel'"
+                    decoration-success="state == 'posted'"
+                    decoration-info="state == 'draft'"
+                    optional="hide" />
             </tree>
         </field>
     </record>
@@ -33,71 +34,91 @@
                 <header>
                     <!-- Botón Generar: solo en borrador -->
                     <button name="action_generate"
-                            type="object"
-                            string="Generar"
-                            class="btn-primary"
-                            invisible="state != 'draft'"/>
+                        type="object"
+                        string="Generar"
+                        class="btn-primary"
+                        invisible="state != 'draft'" />
 
                     <!-- Botón Confirmar: solo en borrador -->
                     <button name="action_confirm"
-                            type="object"
-                            string="Confirmar"
-                            class="btn-primary"
-                            invisible="state != 'draft'"/>
+                        type="object"
+                        string="Confirmar"
+                        class="btn-primary"
+                        invisible="state != 'draft'" />
 
                     <!-- Botón Cancelar: solo en borrador -->
                     <button name="action_cancel"
-                            type="object"
-                            string="Cancelar"
-                            class="btn-secondary"
-                            invisible="state != 'draft'"/>
+                        type="object"
+                        string="Cancelar"
+                        class="btn-secondary"
+                        invisible="state != 'draft'" />
 
                     <!-- Opcional: regresar a borrador -->
                     <button name="action_set_draft"
-                            type="object"
-                            string="Regresar a borrador"
-                            class="btn-secondary"
-                            invisible="state != 'posted'"/>
+                        type="object"
+                        string="Regresar a borrador"
+                        class="btn-secondary"
+                        invisible="state != 'posted'" />
 
 
-                    <field name="state" widget="statusbar" statusbar_visible="draft,posted,cancel"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,posted,cancel" />
                 </header>
 
                 <sheet>
                     <div class="oe_title">
-                        <h1><field name="name" readonly="1"/></h1>
+                        <h1>
+                            <field name="name" readonly="1" />
+                        </h1>
                     </div>
 
                     <group>
                         <group>
-                            <field name="project_id" options="{'no_create': False}"/>
-                            <field name="month"/>
-                            <field name="year"/>
+                            <field name="proyecto_aso_id" options="{'no_create': False}" />
+                            <field name="month" />
+                            <field name="year" />
                         </group>
                         <group>
-                            <field name="total_to_charge" readonly="1"/>
-                            <field name="total_paid_dummy" readonly="1"/>
-                            <field name="total_balance" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="total_to_charge" readonly="1" />
+                            <field name="total_paid_dummy" readonly="1" />
+                            <field name="total_balance" readonly="1" />
                         </group>
                     </group>
 
                     <notebook>
                         <page string="Detalle">
                             <field name="line_ids">
-                                <tree editable="bottom">
-                                    <field name="residencia_id"/>
-                                    <field name="move_id"/>
-                                    <field name="amount_total"/>
-                                    <field name="amount_balance" readonly="1"/>
+                                <tree create="0" edit="0" delete="0">
+                                    <field name="residencia_id"
+                                        options="{'no_create': True, 'no_open': False}" />
+
+                                    <field name="move_id"
+                                        string="Cargo"
+                                        context="{'aso_only_number': True}"
+                                        options="{'no_create': True, 'no_open': False}" />
+
+                                    <field name="amount_total" readonly="1" />
+                                    <field name="amount_balance" readonly="1" />
+
+                                    <field name="move_state"
+                                        string="Estado cargo"
+                                        widget="badge"
+                                        decoration-info="move_state == 'draft'"
+                                        decoration-success="move_state == 'posted'"
+                                        decoration-danger="move_state == 'cancel'" />
                                 </tree>
-                                <form string="Detalle de residencia">
+
+                                <!-- Este form es de la LÍNEA, no de la residencia -->
+                                <form string="Detalle de residencia" edit="false" create="false" delete="false">
                                     <group>
-                                        <field name="residencia_id"/>
-                                        <field name="move_id"/>
+                                        <field name="residencia_id" readonly="1" options="{'no_create': True, 'no_open': False}"/>
+                                        <field name="move_id" readonly="1" options="{'no_create': True, 'no_open': False}"/>
+                                        <field name="move_state" widget="badge" />
                                     </group>
                                     <group>
-                                        <field name="amount_total"/>
-                                        <field name="amount_balance" readonly="1"/>
+                                        <field name="currency_id" invisible="1"/>
+                                        <field name="amount_total" readonly="1" />
+                                        <field name="amount_balance" readonly="1" />
                                     </group>
                                 </form>
                             </field>
@@ -114,18 +135,19 @@
         <field name="model">asovec.proyecto_cobro_mensual</field>
         <field name="arch" type="xml">
             <search string="Buscar cobros mensuales">
-                <field name="name"/>
-                <field name="project_id"/>
-                <field name="month"/>
-                <field name="year"/>
-                <field name="state"/>
-                <filter string="Borrador" name="draft" domain="[('state','=','draft')]"/>
-                <filter string="Publicado" name="posted" domain="[('state','=','posted')]"/>
-                <filter string="Cancelado" name="cancel" domain="[('state','=','cancel')]"/>
+                <field name="name" />
+                <field name="proyecto_aso_id" />
+                <field name="month" />
+                <field name="year" />
+                <field name="state" />
+                <filter string="Borrador" name="draft" domain="[('state','=','draft')]" />
+                <filter string="Publicado" name="posted" domain="[('state','=','posted')]" />
+                <filter string="Cancelado" name="cancel" domain="[('state','=','cancel')]" />
                 <group expand="0" string="Agrupar por">
-                    <filter string="Proyecto" name="grp_project" context="{'group_by':'project_id'}"/>
-                    <filter string="Año" name="grp_year" context="{'group_by':'year'}"/>
-                    <filter string="Mes" name="grp_month" context="{'group_by':'month'}"/>
+                    <filter string="Proyecto" name="grp_proyecto_aso"
+                        context="{'group_by':'proyecto_aso_id'}" />
+                    <filter string="Año" name="grp_year" context="{'group_by':'year'}" />
+                    <filter string="Mes" name="grp_month" context="{'group_by':'month'}" />
                 </group>
             </search>
         </field>

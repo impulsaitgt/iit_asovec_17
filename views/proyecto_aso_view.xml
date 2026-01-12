@@ -25,6 +25,7 @@
                             <field name="detalle" widget="text" placeholder="Escribe aquí..." />
                         </group>
                         <group>
+                            <field name="currency_id" invisible="1"/>
                             <field name="cobro_base" placeholder="Cobro Base" />
                             <field name="precio_metro"
                                 placeholder="Precio por Metro (puedes cambiar esto a lotes especificos)" />
@@ -47,6 +48,7 @@
                 <field name="name" />
                 <field name="direccion" />
                 <field name="detalle" />
+                <field name="currency_id" invisible="1"/>
                 <field name="cobro_base" />
                 <field name="precio_metro" />
                 <field name="metro_base" />

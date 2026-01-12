@@ -88,7 +88,9 @@ class ResidenciaLines(models.Model):
     _name = 'asovec.residencia.lines'
 
     producto_id = fields.Many2one(string="Servicio", comodel_name='product.template', required=True, domain=[('aso_es_servicio_aso', '=', True)])
-    precio = fields.Float(string="Precio", default=0, required=True)
+    company_id = fields.Many2one("res.company", string="Compañía", required=True, default=lambda self: self.env.company, index=True)
+    currency_id = fields.Many2one("res.currency", string="Moneda", related="company_id.currency_id", store=True, readonly=True)
+    precio = fields.Monetary(string="Precio", default=0, currency_field="currency_id", required=True)
     residencia_id = fields.Many2one(comodel_name='asovec.residencia')
 
     @api.onchange('producto_id')
