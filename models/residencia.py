@@ -15,6 +15,7 @@ class Residencia(models.Model):
     contadores_ids = fields.One2many(comodel_name='asovec.contador', inverse_name='residencia_id', string='Contadores')
     contador_count = fields.Integer(string="Contadores", compute="_compute_contador_count")
     lectura_count = fields.Integer(string="Lecturas", compute="_compute_lectura_count")
+    activo = fields.Boolean(string='Activo', default=True)
 
     _sql_constraints = [
         ('referencia_unica', 'unique(name)', "Esta residencia ya existe, por favor especifica otro Nombre/Codigo")

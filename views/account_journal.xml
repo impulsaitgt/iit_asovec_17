@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+
+<odoo>
+    <record id="account_journal_form_ihnerit" model="ir.ui.view">
+        <field name="name">account.journal.inherited</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.view_account_journal_form"/>
+        <field name="arch" type="xml">
+            <field name="type" position="after">
+                <field name="aso_cargo"/>
+            </field>
+        </field>
+    </record>
+</odoo>

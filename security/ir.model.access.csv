@@ -4,3 +4,5 @@ accesos_residencias_lineas_administrador,Acceso a Residencias Lineas,model_asove
 accesos_proyectos_administrador,Acceso a Proyectos,model_asovec_proyecto_aso,asovec_group_administrador,1,1,1,1
 accesos_contadores_administrador,Acceso a Contadores,model_asovec_contador,asovec_group_administrador,1,1,1,1
 accesos_contadores_lineas_administrador,Acceso a Contadores Lineas,model_asovec_contador_lines,asovec_group_administrador,1,1,1,1
+accesos_proyectos_cobro_mensual_administrador,Acceso a Proyectos Cobro Mensual,model_asovec_proyecto_cobro_mensual,asovec_group_administrador,1,1,1,1
+accesos_proyectos_cobro_mensual_line_administrador,Acceso a Proyectos Cobro Mensual Linea,model_asovec_proyecto_cobro_mensual_line,asovec_group_administrador,1,1,1,1
