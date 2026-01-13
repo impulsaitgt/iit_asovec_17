@@ -232,6 +232,10 @@ class ProyectoCobroMensualLine(models.Model):
     _order = "id desc"
 
     cobro_id = fields.Many2one(comodel_name="asovec.proyecto_cobro_mensual", string="Cobro mensual", required=True, ondelete="cascade", index=True)
+    month = fields.Selection(related="cobro_id.month", string="Mes", store=True, readonly=True)
+    year = fields.Integer(related="cobro_id.year", string="Año", store=True, readonly=True)
+    cobro_state = fields.Selection(related="cobro_id.state", string="Estado cobro", store=True, readonly=True)
+
     proyecto_aso_id = fields.Many2one(related="cobro_id.proyecto_aso_id", string="Proyecto", store=True, readonly=True)
     residencia_id = fields.Many2one(comodel_name="asovec.residencia", string="Residencia", required=True, index=True)
     move_id = fields.Many2one(comodel_name="account.move", string="Cargo", help="Cargo contable asociado (se creará luego).", ondelete="set null")

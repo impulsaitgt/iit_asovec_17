@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- FORM del Wizard -->
+    <record id="view_asovec_cobro_mensual_consulta_wizard_form" model="ir.ui.view">
+      <field name="name">asovec.cobro_mensual_consulta_wizard.form</field>
+      <field name="model">asovec.cobro_mensual_consulta_wizard</field>
+      <field name="arch" type="xml">
+        <form string="Consulta de cobros mensuales">
+          <sheet>
+            <group>
+              <field name="proyecto_aso_id"/>
+              <field name="residencia_id"/>
+            </group>
+
+            <footer>
+              <button name="action_consultar" type="object" string="Consultar" class="btn-primary"/>
+              <button string="Cerrar" special="cancel" class="btn-secondary"/>
+            </footer>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+  </data>
+</odoo>

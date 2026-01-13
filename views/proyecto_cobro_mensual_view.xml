@@ -113,7 +113,10 @@
                                     <group>
                                         <field name="residencia_id" readonly="1" options="{'no_create': True, 'no_open': False}"/>
                                         <field name="move_id" readonly="1" options="{'no_create': True, 'no_open': False}"/>
-                                        <field name="move_state" widget="badge" />
+                                        <field name="move_state" widget="badge"
+                                               decoration-info="move_state == 'draft'"
+                                               decoration-success="move_state == 'posted'"
+                                               decoration-danger="move_state == 'cancel'"/>
                                     </group>
                                     <group>
                                         <field name="currency_id" invisible="1"/>

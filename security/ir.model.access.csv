@@ -6,3 +6,4 @@ accesos_contadores_administrador,Acceso a Contadores,model_asovec_contador,asove
 accesos_contadores_lineas_administrador,Acceso a Contadores Lineas,model_asovec_contador_lines,asovec_group_administrador,1,1,1,1
 accesos_proyectos_cobro_mensual_administrador,Acceso a Proyectos Cobro Mensual,model_asovec_proyecto_cobro_mensual,asovec_group_administrador,1,1,1,1
 accesos_proyectos_cobro_mensual_line_administrador,Acceso a Proyectos Cobro Mensual Linea,model_asovec_proyecto_cobro_mensual_line,asovec_group_administrador,1,1,1,1
+accesos_cobro_mensual_consulta_wizard,Acceso a Consulta wizard,model_asovec_cobro_mensual_consulta_wizard,asovec_group_administrador,1,1,1,1

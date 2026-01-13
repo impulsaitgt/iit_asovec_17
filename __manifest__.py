@@ -19,6 +19,8 @@
         'views/proyecto_cobro_mensual_view.xml',
         'views/product_template_view.xml',
         'views/account_journal.xml',
+        'views/proyecto_cobro_mensual_line_view.xml',
+        'views/cobro_consulta_wizard_view.xml',
         'views/menu_view.xml'
     ]
 }
