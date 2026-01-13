@@ -15,6 +15,7 @@ class Residencia(models.Model):
     contadores_ids = fields.One2many(comodel_name='asovec.contador', inverse_name='residencia_id', string='Contadores')
     contador_count = fields.Integer(string="Contadores", compute="_compute_contador_count")
     lectura_count = fields.Integer(string="Lecturas", compute="_compute_lectura_count")
+    activo = fields.Boolean(string='Activo', default=True)
 
     _sql_constraints = [
         ('referencia_unica', 'unique(name)', "Esta residencia ya existe, por favor especifica otro Nombre/Codigo")
@@ -87,7 +88,9 @@ class ResidenciaLines(models.Model):
     _name = 'asovec.residencia.lines'
 
     producto_id = fields.Many2one(string="Servicio", comodel_name='product.template', required=True, domain=[('aso_es_servicio_aso', '=', True)])
-    precio = fields.Float(string="Precio", default=0, required=True)
+    company_id = fields.Many2one("res.company", string="Compañía", required=True, default=lambda self: self.env.company, index=True)
+    currency_id = fields.Many2one("res.currency", string="Moneda", related="company_id.currency_id", store=True, readonly=True)
+    precio = fields.Monetary(string="Precio", default=0, currency_field="currency_id", required=True)
     residencia_id = fields.Many2one(comodel_name='asovec.residencia')
 
     @api.onchange('producto_id')

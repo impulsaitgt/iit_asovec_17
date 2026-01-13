@@ -6,10 +6,12 @@ class ProyectoAso(models.Model):
     name = fields.Char(string="Nombre",required=True)
     direccion = fields.Char(string="Direccion")
     detalle = fields.Text(string="Informacion Detallada")
-    cobro_base = fields.Float(string="Cobro Base", default=0, required=True)
-    precio_metro = fields.Float(string="Precio Metro", default=0, required=True)
+    company_id = fields.Many2one("res.company", string="Compañía", required=True, default=lambda self: self.env.company, index=True)
+    currency_id = fields.Many2one("res.currency", string="Moneda", related="company_id.currency_id", store=True, readonly=True)
+    cobro_base = fields.Monetary(string="Cobro Base", currency_field="currency_id", default=0, required=True)
+    precio_metro = fields.Monetary(string="Precio Metro", currency_field="currency_id", default=0, required=True)
     metro_base = fields.Integer(string="Metros base (derecho)", default=0, required=True)
-    cobro_inactivas = fields.Float(string="Cobro por Inactivas", required=True, default=0.00)
+    cobro_inactivas = fields.Monetary(string="Cobro por Inactivas", currency_field="currency_id", required=True, default=0.00)
     residencia_count = fields.Integer(string="Residencias", compute="_compute_residencia_count")
 
     _sql_constraints = [

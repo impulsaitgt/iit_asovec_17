@@ -8,6 +8,7 @@
         <field name="arch" type="xml">
         <field name="categ_id" position="after">
             <field name="aso_es_servicio_aso"/>
+            <field name="aso_tipo_servicio" modifiers="{'invisible': [['aso_es_servicio_aso', '=', false]], 'required': [['aso_es_servicio_aso', '=', true]]}"/>
          </field>
         </field>
     </record>

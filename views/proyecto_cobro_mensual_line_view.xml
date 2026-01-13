@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_asovec_cobro_mensual_line_tree_consulta" model="ir.ui.view">
+      <field name="name">asovec.proyecto_cobro_mensual_line.tree.consulta</field>
+      <field name="model">asovec.proyecto_cobro_mensual_line</field>
+      <field name="arch" type="xml">
+        <tree string="Cobros mensuales (Residencia)" create="0" edit="0" delete="0">
+          <field name="month" string="Mes"/>
+          <field name="year" string="Año"/>
+
+          <!-- Total y saldo de la línea -->
+          <field name="currency_id" column_invisible="1"/>
+          <field name="amount_total" string="Total"/>
+          <field name="amount_balance" string="Saldo"/>
+
+          <!-- Cargo contable -->
+          <field name="move_id" string="Cargo" context="{'aso_only_number': True}"/>
+          <field name="move_state" string="Estado cargo" widget="badge" 
+                 decoration-info="move_state == 'draft'"
+                 decoration-success="move_state == 'posted'"
+                 decoration-danger="move_state == 'cancel'"/>
+
+          <field name="cobro_state" string="Estado cobro" widget="badge"
+                 decoration-info="move_state == 'draft'"
+                 decoration-success="move_state == 'posted'"
+                 decoration-danger="move_state == 'cancel'"/>
+        </tree>
+      </field>
+    </record>
+
+    <record id="view_asovec_proyecto_cobro_mensual_line_form" model="ir.ui.view">
+      <field name="name">asovec.proyecto_cobro_mensual_line.form</field>
+      <field name="model">asovec.proyecto_cobro_mensual_line</field>
+      <field name="arch" type="xml">
+        <form string="Detalle cobro mensual" create="false" edit="false" delete="false">
+          <sheet>
+
+            <div class="oe_title">
+              <h1>
+                <field name="residencia_id" options="{'no_create': True, 'no_open': False}"/>
+              </h1>
+            </div>
+
+            <!-- PERIODO -->
+            <group string="Período">
+              <group>
+                <field name="month"/>
+                <field name="year"/>
+              </group>
+              <group>
+                <field name="cobro_state"
+                       string="Estado cobro"
+                       widget="badge"
+                       decoration-info="cobro_state == 'draft'"
+                       decoration-success="cobro_state == 'posted'"
+                       decoration-danger="cobro_state == 'cancel'"/>
+              </group>
+            </group>
+
+            <!-- CONTEXTO -->
+            <group string="Contexto">
+              <group>
+                <field name="proyecto_aso_id" options="{'no_create': True, 'no_open': False}"/>
+                <field name="cobro_id" options="{'no_create': True, 'no_open': False}"/>
+              </group>
+            </group>
+
+            <!-- CARGO -->
+            <group string="Cargo contable">
+              <group>
+                <field name="move_id"
+                       context="{'aso_only_number': True}"
+                       options="{'no_create': True, 'no_open': False}"/>
+
+                <field name="move_state"
+                       string="Estado cargo"
+                       widget="badge"
+                       decoration-info="move_state == 'draft'"
+                       decoration-success="move_state == 'posted'"
+                       decoration-danger="move_state == 'cancel'"/>
+              </group>
+
+              <group>
+                <field name="currency_id" invisible="1"/>
+                <field name="amount_total"/>
+                <field name="amount_balance"/>
+              </group>
+            </group>
+
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+  </data>
+</odoo>
