@@ -89,11 +89,15 @@
     <menuitem name="Servicios" id="productos_opcion" parent="mantenimientos_menu" sequence="33"
         action="action_product_template_servicios_aso" />
 
-    <menuitem name="Procesos" id="procesos_menu" parent="asovec_menu" sequence="40" />
+    <menuitem name="Movimientos" id="movimientos_menu" parent="asovec_menu" sequence="40" />
+    <menuitem name="Facturas y Cargos" id="facturas_cargos_opcion" parent="movimientos_menu" action="account.action_move_out_invoice_type"/>
+    <menuitem name="Pagos" id="pagos_opcion" parent="movimientos_menu" action="account.action_account_payments"/>
+
+    <menuitem name="Procesos" id="procesos_menu" parent="asovec_menu" sequence="50" />
     <menuitem name="Generacion de Cobros Mensuales" id="proyecto_cobro_mensual"
         parent="procesos_menu" action="proyecto_cobro_mensual_action" />
 
-    <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="40" />
+    <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="60" />
     <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"
         action="cobro_mensual_consulta_wizard_action" />
     <menuitem name="Análisis Cobros y Pagos" id="menu_asovec_estado_cuenta_analisis"

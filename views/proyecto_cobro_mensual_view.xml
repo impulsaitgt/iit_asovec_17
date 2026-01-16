@@ -10,7 +10,7 @@
                 <field name="name" />
                 <field name="proyecto_aso_id" />
                 <field name="month" />
-                <field name="currency_id" invisible="1"/>
+                <field name="currency_id" invisible="1" />
                 <field name="year" />
                 <field name="total_to_charge" />
                 <field name="total_paid" />
@@ -78,7 +78,7 @@
                             <field name="year" />
                         </group>
                         <group>
-                            <field name="currency_id" invisible="1"/>
+                            <field name="currency_id" invisible="1" />
                             <field name="total_to_charge" readonly="1" />
                             <field name="total_paid" readonly="1" />
                             <field name="total_balance" readonly="1" />
@@ -106,22 +106,27 @@
                                         decoration-info="move_state == 'draft'"
                                         decoration-success="move_state == 'posted'"
                                         decoration-danger="move_state == 'cancel'" />
+                                    <field name="con_lectura" readonly="1" />
                                 </tree>
 
                                 <!-- Este form es de la LÍNEA, no de la residencia -->
-                                <form string="Detalle de residencia" edit="false" create="false" delete="false">
+                                <form string="Detalle de residencia" edit="false" create="false"
+                                    delete="false">
                                     <group>
-                                        <field name="residencia_id" readonly="1" options="{'no_create': True, 'no_open': False}"/>
-                                        <field name="move_id" readonly="1" options="{'no_create': True, 'no_open': False}"/>
+                                        <field name="residencia_id" readonly="1"
+                                            options="{'no_create': True, 'no_open': False}" />
+                                        <field name="move_id" readonly="1"
+                                            options="{'no_create': True, 'no_open': False}" />
                                         <field name="move_state" widget="badge"
-                                               decoration-info="move_state == 'draft'"
-                                               decoration-success="move_state == 'posted'"
-                                               decoration-danger="move_state == 'cancel'"/>
+                                            decoration-info="move_state == 'draft'"
+                                            decoration-success="move_state == 'posted'"
+                                            decoration-danger="move_state == 'cancel'" />
                                     </group>
                                     <group>
-                                        <field name="currency_id" invisible="1"/>
+                                        <field name="currency_id" invisible="1" />
                                         <field name="amount_total" readonly="1" />
                                         <field name="amount_balance" readonly="1" />
+                                        <field name="con_lectura" readonly="1" />
                                     </group>
                                 </form>
                             </field>

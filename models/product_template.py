@@ -6,9 +6,11 @@ class product_template(models.Model):
     _inherit = "product.template"
 
     aso_es_servicio_aso = fields.Boolean(string='Es Servicio de Asociacion', default=False)
-    # aso_automatico = fields.Boolean(string='Automatico Mensual', default=False)
     tipo_servicio_aso_id = fields.Many2one(string="Tipo Servicio Asociacion", comodel_name='asovec.tipo_servicio_aso', required=False)
     aso_automatico = fields.Boolean(related="tipo_servicio_aso_id.aso_automatico", string="Servicio Automatico", store=False, readonly=True)
+    aso_agua_inactivo = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_inactivo", string="Servicio Agua Inactivo", store=False, readonly=True)
+    aso_agua_base = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_base", string="Servicio Agua Base", store=False, readonly=True)
+    aso_agua_exceso = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_exceso", string="Servicio Agua Exceso", store=False, readonly=True)
 
 
 

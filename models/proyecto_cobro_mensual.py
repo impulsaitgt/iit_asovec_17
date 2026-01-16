@@ -136,6 +136,8 @@ class ProyectoCobroMensual(models.Model):
         Journal = self.env["account.journal"]
         Residencia = self.env["asovec.residencia"]
         ProductTemplate = self.env["product.template"]
+        ResidenciaLines = self.env["asovec.residencia.lines"]
+        ContadorLine = self.env["asovec.contador.lines"]
 
         for rec in self:
             if rec.state != "draft":
@@ -162,6 +164,15 @@ class ProyectoCobroMensual(models.Model):
             if not servicios:
                 raise UserError(_("No existen productos marcados como 'Servicio de Asociación'."))
 
+            moves = rec.line_ids.mapped("move_id").filtered(lambda m: m)
+            not_draft = moves.filtered(lambda m: m.state != "draft")
+            if not_draft:
+                raise UserError(_(
+                    "No puedes volver a generar porque hay cargos que ya no están en borrador:\n%s"
+                ) % "\n".join(not_draft.mapped("name")))
+
+            moves.unlink()
+            
             # 4️⃣ Limpiar detalle previo
             rec.line_ids.unlink()
 
@@ -180,14 +191,66 @@ class ProyectoCobroMensual(models.Model):
                     if not product:
                         continue
 
+                    servicio_especial = ResidenciaLines.search([("residencia_id", "=", r.id), ("producto_id", "=", t.id)])
+
+                    if not servicio_especial:
+                        precio = t.list_price
+                    else:
+                        precio = servicio_especial.precio
+                    
+                    if precio > 0:
+                        invoice_lines.append((0, 0, {
+                            "product_id": product.id,
+                            "name": t.name,
+                            "quantity": 1.0,
+                            "price_unit": precio,
+                            "tax_ids": [(6, 0, [])],   # sin impuestos
+                        }))
+
+                lectura = ContadorLine.search([("residencia_id", "=", r.id), ("anio","=", rec.year), ("mes","=", rec.month)])
+
+                if not r.activo:  
+                    # Cuota para contadores inactivos
+                    servicio = ProductTemplate.search([("aso_agua_inactivo", "=", True)])
+                    servicio_inactivo = servicio.product_variant_id
                     invoice_lines.append((0, 0, {
-                        "product_id": product.id,
-                        "name": t.name,
+                        "product_id": servicio_inactivo.id,
+                        "name": servicio.name,
                         "quantity": 1.0,
-                        "price_unit": t.list_price,
+                        "price_unit": r.proyecto_aso_id.cobro_inactivas,
+                        "tax_ids": [(6, 0, [])],   # sin impuestos
+                    }))
+                else:
+                    # Cuota base para contadores
+                    if lectura:
+                        cobro_base = lectura.base
+                    else:
+                        cobro_base = rec.proyecto_aso_id.cobro_base
+                    servicio = ProductTemplate.search([("aso_agua_base", "=", True)])
+                    servicio_base = servicio.product_variant_id
+                    invoice_lines.append((0, 0, {
+                        "product_id": servicio_base.id,
+                        "name": servicio.name,
+                        "quantity": 1.0,
+                        "price_unit": cobro_base,
                         "tax_ids": [(6, 0, [])],   # sin impuestos
                     }))
 
+                    # Cuota base para contadores
+                    if lectura:
+                        cobro_exceso = lectura.pago_extra
+                    else:
+                        cobro_exceso = 0
+                    servicio = ProductTemplate.search([("aso_agua_exceso", "=", True)])
+                    servicio_exceso = servicio.product_variant_id
+                    invoice_lines.append((0, 0, {
+                        "product_id": servicio_exceso.id,
+                        "name": servicio.name,
+                        "quantity": 1.0,
+                        "price_unit": cobro_exceso,
+                        "tax_ids": [(6, 0, [])],   # sin impuestos
+                    }))
+                
                 if not invoice_lines:
                     raise UserError(_("No se pudieron generar líneas de cargo."))
 
@@ -207,6 +270,7 @@ class ProyectoCobroMensual(models.Model):
                 lines_vals.append((0, 0, {
                     "residencia_id": r.id,
                     "move_id": move.id,
+                    "con_lectura": bool(lectura),
                     "amount_total": move.amount_total,  # ok aunque sea related, no estorba
                 }))
 
@@ -344,6 +408,8 @@ class ProyectoCobroMensualLine(models.Model):
         store=True,
         readonly=True,
     )
+
+    con_lectura = fields.Boolean(string='Lectura Valida', default=False)
 
     @api.depends("amount_total", "amount_residual")
     def _compute_line_balance(self):
