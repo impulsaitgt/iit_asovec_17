@@ -106,7 +106,13 @@
                                         decoration-info="move_state == 'draft'"
                                         decoration-success="move_state == 'posted'"
                                         decoration-danger="move_state == 'cancel'" />
-                                    <field name="con_lectura" readonly="1" />
+
+
+                                    <field name="con_lectura"/>
+<!--                                    widget="badge"
+                                        options="{'true_label': 'Con lectura', 'false_label': 'Sin lectura'}"
+                                        decoration-success="con_lectura"
+                                        decoration-danger="not con_lectura" /> -->
                                 </tree>
 
                                 <!-- Este form es de la LÍNEA, no de la residencia -->
