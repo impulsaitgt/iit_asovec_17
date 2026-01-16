@@ -6,30 +6,23 @@ class product_template(models.Model):
     _inherit = "product.template"
 
     aso_es_servicio_aso = fields.Boolean(string='Es Servicio de Asociacion', default=False)
-    aso_tipo_servicio = fields.Selection([
-        ('canon', 'Canon de agua'),
-        ('inactiva', 'Cuota Inactiva'),
-        ('exceso', 'Exceso'),
-        ('reconexion', 'Reconexión'),
-        ('cambio_contador', 'Cambio de Contador'),
-        ('infraestructura', 'Infraestructura y drenajes'),
-        ('derecho_media_paja', 'Derecho de media paja de agua SNJ'),
-        ('cuota_extra', 'Cuota Extraordinaria GDIII'),
-        ('varios', 'Varios'),
-        ('promejora', 'Promejoramiento'),
-        ('asoveguas', 'ASOVEGUAS'),
-        ('siretgua', 'SIRETGUA'),
-    ], string="Tipo de Servicio ASO")
+    tipo_servicio_aso_id = fields.Many2one(string="Tipo Servicio Asociacion", comodel_name='asovec.tipo_servicio_aso', required=False)
+    aso_automatico = fields.Boolean(related="tipo_servicio_aso_id.aso_automatico", string="Servicio Automatico", store=False, readonly=True)
+    aso_agua_inactivo = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_inactivo", string="Servicio Agua Inactivo", store=False, readonly=True)
+    aso_agua_base = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_base", string="Servicio Agua Base", store=False, readonly=True)
+    aso_agua_exceso = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_exceso", string="Servicio Agua Exceso", store=False, readonly=True)
 
-    @api.constrains('aso_es_servicio_aso', 'aso_tipo_servicio')
-    def _check_tipo_servicio_aso(self):
+
+
+    _sql_constraints = [
+        ('no_servicio_no_aso', "CHECK (NOT aso_es_servicio_aso OR detailed_type = 'service')", 'No es permitido que un servicio de asociacion que no sea un servicio.')
+    ]
+
+
+    @api.constrains('aso_es_servicio_aso', 'detailed_type')
+    def _check_aso_solo_servicio(self):
         for rec in self:
-            if rec.aso_es_servicio_aso and not rec.aso_tipo_servicio:
+            if rec.aso_es_servicio_aso and rec.detailed_type != 'service':
                 raise ValidationError(
-                    "Debe seleccionar un Tipo de Servicio ASO cuando el producto es un Servicio de Asociación."
-                )
-
-            if not rec.aso_es_servicio_aso and rec.aso_tipo_servicio:
-                raise ValidationError(
-                    "El Tipo de Servicio ASO solo puede usarse si 'Es Servicio de Asociación' está activo."
+                    'Para marcar "Servicio ASO", el producto debe ser de tipo Servicio.'
                 )

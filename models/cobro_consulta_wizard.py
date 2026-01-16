@@ -18,6 +18,9 @@ class CobroMensualConsultaWizard(models.TransientModel):
         domain="[('proyecto_aso_id', '=', proyecto_aso_id)]",
     )
 
+    # -------------------------
+    # Abrir estado de cuenta
+    # -------------------------
     def action_consultar(self):
         self.ensure_one()
 
@@ -26,13 +29,39 @@ class CobroMensualConsultaWizard(models.TransientModel):
 
         return {
             "type": "ir.actions.act_window",
-            "name": _("Cobros mensuales"),
+            "name": _("Estado de cuenta: %s / %s") % (
+                self.proyecto_aso_id.display_name,
+                self.residencia_id.display_name,
+            ),
             "res_model": "asovec.proyecto_cobro_mensual_line",
             "view_mode": "tree,form",
             "target": "current",
             "domain": [
                 ("proyecto_aso_id", "=", self.proyecto_aso_id.id),
                 ("residencia_id", "=", self.residencia_id.id),
-                ("cobro_id.state", "!=", "cancel"),
+                ("cobro_id.state", "=", "posted"),
             ],
         }
+
+    # -------------------------
+    # Imprimir PDF
+    # -------------------------
+    def action_print_pdf(self):
+        self.ensure_one()
+
+        if self.residencia_id.proyecto_aso_id != self.proyecto_aso_id:
+            raise UserError(_("La residencia no pertenece al proyecto seleccionado."))
+
+        # IMPORTANTE: pasar data={} fuerza a Odoo a usar docs (recordset)
+        return self.env.ref("iit_asovec.action_report_estado_cuenta_pdf").report_action(self, data={})
+
+    # -------------------------
+    # Líneas del estado de cuenta
+    # -------------------------
+    def _get_estado_cuenta_lines(self):
+        self.ensure_one()
+        return self.env["asovec.proyecto_cobro_mensual_line"].search([
+            ("proyecto_aso_id", "=", self.proyecto_aso_id.id),
+            ("residencia_id", "=", self.residencia_id.id),
+            ("cobro_id.state", "=", "posted"),
+        ], order="year desc, month desc, id desc")

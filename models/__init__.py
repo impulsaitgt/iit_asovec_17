@@ -1,1 +1,1 @@
-from . import residencia, proyecto_aso, product_template, contador, proyecto_cobro_mensual, account_journal, cobro_consulta_wizard
+from . import residencia, proyecto_aso, product_template, contador, proyecto_cobro_mensual, account_journal, cobro_consulta_wizard, tipo_servicio_aso
