@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+
+<odoo>
+    <!--Vista formulario -->
+    <record id="tipo_servicio_aso_form_view" model="ir.ui.view">
+        <field name="name">tipo_servicio_aso.form.view</field>
+        <field name="model">asovec.tipo_servicio_aso</field>
+        <field name="arch" type="xml">
+            <form string="Tipo Servicio Asociacion">
+                <sheet>
+                    <group>
+                        <field name="name" placeholder="Nombre" />
+                    </group>
+                    <group>
+                        <field name="aso_automatico" />
+                        <field name="aso_agua" />
+                    </group>
+                    <group string="Opciones para servicios de Contadores de Agua" invisible="not aso_agua">
+                        <field name="aso_agua_inactivo" />
+                        <field name="aso_agua_base" />
+                        <field name="aso_agua_exceso" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <!--Vista
+    de arbol-->
+    <record id="tipo_servicio_aso_tree_view" model="ir.ui.view">
+        <field name="name">tipo_servicio_aso.tree.view"</field>
+        <field name="model">asovec.tipo_servicio_aso</field>
+        <field name="arch" type="xml">
+            <tree string="Tipo Servicio Asociacion">
+                <field name="name" />
+                <field name="aso_automatico" />
+                <field name="aso_agua" />
+                <field name="aso_agua_inactivo" />
+                <field name="aso_agua_base" />
+                <field name="aso_agua_exceso" />
+            </tree>
+        </field>
+    </record>
+
+</odoo>

@@ -82,12 +82,39 @@ class Residencia(models.Model):
                 'default_fecha_lectura': fields.Date.context_today(self),
             },
         }
+    
+    def action_cargar_servicios_asociacion(self):
+        self.ensure_one()
+
+        # 1) Borrar líneas actuales
+        self.residencia_lines.unlink()
+
+        # 2) Buscar productos marcados como servicio ASO
+        productos = self.env['product.template'].search([
+            ('aso_es_servicio_aso', '=', True),
+            ('aso_automatico', '=', True),
+            ('active', '=', True)
+        ])
+
+        # 3) Crear una línea por producto con su precio de lista
+        lines_vals = []
+        for p in productos:
+            lines_vals.append((0, 0, {
+                'producto_id': p.id,
+                'precio': p.list_price,
+            }))
+
+        self.write({'residencia_lines': lines_vals})
+
+        # opcional: notificación
+        return {'type': 'ir.actions.client', 'tag': 'reload'}
+
 
 
 class ResidenciaLines(models.Model):
     _name = 'asovec.residencia.lines'
 
-    producto_id = fields.Many2one(string="Servicio", comodel_name='product.template', required=True, domain=[('aso_es_servicio_aso', '=', True)])
+    producto_id = fields.Many2one(string="Servicio", comodel_name='product.template', required=True, domain=[('aso_es_servicio_aso', '=', True), ('aso_automatico', '=', True)])
     company_id = fields.Many2one("res.company", string="Compañía", required=True, default=lambda self: self.env.company, index=True)
     currency_id = fields.Many2one("res.currency", string="Moneda", related="company_id.currency_id", store=True, readonly=True)
     precio = fields.Monetary(string="Precio", default=0, currency_field="currency_id", required=True)

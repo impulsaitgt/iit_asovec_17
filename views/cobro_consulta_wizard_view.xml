@@ -16,6 +16,7 @@
 
             <footer>
               <button name="action_consultar" type="object" string="Consultar" class="btn-primary"/>
+              <button name="action_print_pdf" type="object" string="Imprimir PDF" class="btn-secondary"/>
               <button string="Cerrar" special="cancel" class="btn-secondary"/>
             </footer>
           </sheet>

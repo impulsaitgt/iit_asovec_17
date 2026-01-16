@@ -7,28 +7,89 @@
       <field name="model">asovec.proyecto_cobro_mensual_line</field>
       <field name="arch" type="xml">
         <tree string="Cobros mensuales (Residencia)" create="0" edit="0" delete="0">
-          <field name="month" string="Mes"/>
-          <field name="year" string="Año"/>
+          <field name="residencia_id" readonly="1" optional="hide" />
+          <field name="cliente_id" readonly="1" optional="hide" />
+          <field name="proyecto_aso_id" readonly="1" optional="hide" />
+
+          <field name="month" string="Mes" />
+          <field name="year" string="Año" />
 
           <!-- Total y saldo de la línea -->
-          <field name="currency_id" column_invisible="1"/>
-          <field name="amount_total" string="Total"/>
-          <field name="amount_balance" string="Saldo"/>
+          <field name="currency_id" column_invisible="1" />
+          <field name="amount_total" string="Total" />
+          <field name="amount_paid" string="Pagado" />
+          <field name="amount_balance" string="Saldo" />
 
           <!-- Cargo contable -->
-          <field name="move_id" string="Cargo" context="{'aso_only_number': True}"/>
-          <field name="move_state" string="Estado cargo" widget="badge" 
-                 decoration-info="move_state == 'draft'"
-                 decoration-success="move_state == 'posted'"
-                 decoration-danger="move_state == 'cancel'"/>
+          <field name="move_id" string="Cargo" context="{'aso_only_number': True}" />
+          <field name="move_state" string="Estado cargo" widget="badge"
+            decoration-info="move_state == 'draft'"
+            decoration-success="move_state == 'posted'"
+            decoration-danger="move_state == 'cancel'" />
 
           <field name="cobro_state" string="Estado cobro" widget="badge"
-                 decoration-info="move_state == 'draft'"
-                 decoration-success="move_state == 'posted'"
-                 decoration-danger="move_state == 'cancel'"/>
+            decoration-info="move_state == 'draft'"
+            decoration-success="move_state == 'posted'"
+            decoration-danger="move_state == 'cancel'" />
         </tree>
       </field>
     </record>
+
+    <record id="view_asovec_proyecto_cobro_mensual_line_search" model="ir.ui.view">
+      <field name="name">asovec.proyecto_cobro_mensual_line.search</field>
+      <field name="model">asovec.proyecto_cobro_mensual_line</field>
+      <field name="arch" type="xml">
+        <search string="Estado de Cuenta">
+
+          <!-- Filtros -->
+          <field name="proyecto_aso_id" />
+          <field name="residencia_id" />
+          <field name="move_state" />
+          <field name="cobro_state" />
+          <!-- Filtros rápidos por período -->
+          <filter string="Este año"
+            name="current_year"
+            domain="[('year', '=', context_today().year)]" />
+
+          <filter string="Año pasado"
+            name="last_year"
+            domain="[('year', '=', context_today().year - 1)]" />
+
+          <filter string="Este mes"
+            name="current_month"
+            domain="[
+                        ('year', '=', context_today().year),
+                        ('month', '=', context_today().strftime('%%m'))
+                    ]" />
+
+          <filter string="Mes anterior"
+            name="last_month"
+            domain="[
+                        ('year', '=', (context_today().month == 1 and context_today().year - 1 or context_today().year)),
+                        ('month', '=', (context_today().month == 1 and '12' or '%02d' % (context_today().month - 1)))
+                    ]" />
+
+          <group expand="0" string="Agrupar por">
+            <filter string="Proyecto" name="grp_proyecto"
+              context="{'group_by':'proyecto_aso_id'}" />
+
+            <filter string="Residencia" name="grp_residencia"
+              context="{'group_by':'residencia_id'}" />
+
+            <filter string="Cliente" name="grp_cliente"
+              context="{'group_by':'cliente_id'}" />
+
+            <filter string="Año" name="grp_year"
+              context="{'group_by':'year'}" />
+
+            <filter string="Mes" name="grp_month"
+              context="{'group_by':'month'}" />
+          </group>
+
+        </search>
+      </field>
+    </record>
+
 
     <record id="view_asovec_proyecto_cobro_mensual_line_form" model="ir.ui.view">
       <field name="name">asovec.proyecto_cobro_mensual_line.form</field>
@@ -39,31 +100,31 @@
 
             <div class="oe_title">
               <h1>
-                <field name="residencia_id" options="{'no_create': True, 'no_open': False}"/>
+                <field name="residencia_id" options="{'no_create': True, 'no_open': False}" />
               </h1>
             </div>
 
             <!-- PERIODO -->
             <group string="Período">
               <group>
-                <field name="month"/>
-                <field name="year"/>
+                <field name="month" />
+                <field name="year" />
               </group>
               <group>
                 <field name="cobro_state"
-                       string="Estado cobro"
-                       widget="badge"
-                       decoration-info="cobro_state == 'draft'"
-                       decoration-success="cobro_state == 'posted'"
-                       decoration-danger="cobro_state == 'cancel'"/>
+                  string="Estado cobro"
+                  widget="badge"
+                  decoration-info="cobro_state == 'draft'"
+                  decoration-success="cobro_state == 'posted'"
+                  decoration-danger="cobro_state == 'cancel'" />
               </group>
             </group>
 
             <!-- CONTEXTO -->
             <group string="Contexto">
               <group>
-                <field name="proyecto_aso_id" options="{'no_create': True, 'no_open': False}"/>
-                <field name="cobro_id" options="{'no_create': True, 'no_open': False}"/>
+                <field name="proyecto_aso_id" options="{'no_create': True, 'no_open': False}" />
+                <field name="cobro_id" options="{'no_create': True, 'no_open': False}" />
               </group>
             </group>
 
@@ -71,21 +132,21 @@
             <group string="Cargo contable">
               <group>
                 <field name="move_id"
-                       context="{'aso_only_number': True}"
-                       options="{'no_create': True, 'no_open': False}"/>
+                  context="{'aso_only_number': True}"
+                  options="{'no_create': True, 'no_open': False}" />
 
                 <field name="move_state"
-                       string="Estado cargo"
-                       widget="badge"
-                       decoration-info="move_state == 'draft'"
-                       decoration-success="move_state == 'posted'"
-                       decoration-danger="move_state == 'cancel'"/>
+                  string="Estado cargo"
+                  widget="badge"
+                  decoration-info="move_state == 'draft'"
+                  decoration-success="move_state == 'posted'"
+                  decoration-danger="move_state == 'cancel'" />
               </group>
 
               <group>
-                <field name="currency_id" invisible="1"/>
-                <field name="amount_total"/>
-                <field name="amount_balance"/>
+                <field name="currency_id" invisible="1" />
+                <field name="amount_total" />
+                <field name="amount_balance" />
               </group>
             </group>
 
@@ -93,6 +154,24 @@
         </form>
       </field>
     </record>
+
+    <record id="view_asovec_estado_cuenta_line_pivot" model="ir.ui.view">
+      <field name="name">asovec.proyecto_cobro_mensual_line.pivot</field>
+      <field name="model">asovec.proyecto_cobro_mensual_line</field>
+      <field name="arch" type="xml">
+        <pivot string="Análisis Estado de Cuenta">
+          <field name="proyecto_aso_id" type="row" />
+          <field name="residencia_id" type="row" />
+          <field name="year" type="col" />
+          <field name="month" type="col" />
+
+          <field name="amount_total" type="measure" />
+          <field name="amount_paid" type="measure" />
+          <field name="amount_balance" type="measure" />
+        </pivot>
+      </field>
+    </record>
+
 
   </data>
 </odoo>

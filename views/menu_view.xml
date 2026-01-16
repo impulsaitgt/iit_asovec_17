@@ -1,6 +1,17 @@
-<?xml version="1.0" ?>
+<?xml version="1.0"?>
 
 <odoo>
+
+    <record id="action_product_template_servicios_aso" model="ir.actions.act_window">
+        <field name="name">Servicios de Asociación</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="domain">[
+            ('detailed_type', '=', 'service'),
+            ('aso_es_servicio_aso', '=', True)
+            ]</field>
+    </record>
+
 
     <record id="proyecto_aso_action" model="ir.actions.act_window">
         <field name="name">Proyectos</field>
@@ -30,43 +41,70 @@
         <field name="name">Cobros mensuales</field>
         <field name="res_model">asovec.proyecto_cobro_mensual</field>
         <field name="view_mode">tree,form</field>
-        <field name="search_view_id" ref="view_asovec_proyecto_cobro_mensual_search"/>
+        <field name="search_view_id" ref="view_asovec_proyecto_cobro_mensual_search" />
         <field name="context">{}</field>
-    </record> 
-  
-    <record id="cobro_mensual_consulta_wizard_action" model="ir.actions.act_window">
-      <field name="name">Consulta Cobros Mensuales</field>
-      <field name="res_model">asovec.cobro_mensual_consulta_wizard</field>
-      <field name="view_mode">form</field>
-      <field name="target">new</field>
     </record>
 
-    <menuitem name="Asociacion de Vecinos" id="asovec_menu"/>
-    <menuitem name="Asociacion"  id="asociacion_menu" parent="asovec_menu" sequence="10"/>
-    <menuitem name="Proyectos" id="proyecto_aso_opcion" parent="asociacion_menu" action="proyecto_aso_action"/>
-    <menuitem name="Residencias" id="residencia_opcion" parent="asociacion_menu" action="residencia_action"/>
+    <record id="cobro_mensual_consulta_wizard_action" model="ir.actions.act_window">
+        <field name="name">Consulta Cobros Mensuales</field>
+        <field name="res_model">asovec.cobro_mensual_consulta_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
 
-    <menuitem name="Contadores"  id="contadores_menu" parent="asovec_menu" sequence="20"/>
-    <menuitem name="Contadores" id="contador_opcion" parent="contadores_menu" action="contador_action"/>
-    <menuitem name="Lecturas de Contador" id="contador_line_opcion" parent="contadores_menu" action="contador_line_action"/>
+    <record id="action_asovec_estado_cuenta_analisis" model="ir.actions.act_window">
+        <field name="name">Análisis Estado de Cuenta</field>
+        <field name="res_model">asovec.proyecto_cobro_mensual_line</field>
+        <field name="view_mode">tree,pivot,graph</field>
+        <field name="context">{}</field>
+    </record>
 
-    <menuitem name="Mantenimientos" id="mantenimientos_menu" parent="asovec_menu" sequence="30"/>
-    <menuitem name="Residentes" id="clientes_opcion" parent="mantenimientos_menu" action="account.res_partner_action_customer"/>
-    <menuitem name="Servicios" id="productos_opcion" parent="mantenimientos_menu" action="account.product_product_action_sellable"/>
+    <record id="action_tipo_servicio_aso" model="ir.actions.act_window">
+        <field name="name">Tipos de Servicio Asociacion</field>
+        <field name="res_model">asovec.tipo_servicio_aso</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{}</field>
+    </record>
 
-    <menuitem name="Procesos" id="procesos_menu" parent="asovec_menu" sequence="40"/>
-    <menuitem name="Generacion de Cobros Mensuales" id="proyecto_cobro_mensual" parent="procesos_menu" action="proyecto_cobro_mensual_action"/> 
 
-    <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="40"/>
-    <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu" action="cobro_mensual_consulta_wizard_action"/> 
+    <menuitem name="Asociacion de Vecinos" id="asovec_menu" />
+    <menuitem name="Asociacion" id="asociacion_menu" parent="asovec_menu" sequence="10" />
+    <menuitem name="Proyectos" id="proyecto_aso_opcion" parent="asociacion_menu"
+        action="proyecto_aso_action" />
+    <menuitem name="Residencias" id="residencia_opcion" parent="asociacion_menu"
+        action="residencia_action" />
+
+    <menuitem name="Contadores" id="contadores_menu" parent="asovec_menu" sequence="20" />
+    <menuitem name="Contadores" id="contador_opcion" parent="contadores_menu"
+        action="contador_action" />
+    <menuitem name="Lecturas de Contador" id="contador_line_opcion" parent="contadores_menu"
+        action="contador_line_action" />
+
+    <menuitem name="Mantenimientos" id="mantenimientos_menu" parent="asovec_menu" sequence="30" />
+    <menuitem name="Tipos Servicios Aso" id="tipo_servicio_aso_opcion" parent="mantenimientos_menu"
+        sequence="31"
+        action="action_tipo_servicio_aso" />
+    <menuitem name="Residentes" id="clientes_opcion" parent="mantenimientos_menu" sequence="32"
+        action="account.res_partner_action_customer" />
+    <menuitem name="Servicios" id="productos_opcion" parent="mantenimientos_menu" sequence="33"
+        action="action_product_template_servicios_aso" />
+
+    <menuitem name="Procesos" id="procesos_menu" parent="asovec_menu" sequence="40" />
+    <menuitem name="Generacion de Cobros Mensuales" id="proyecto_cobro_mensual"
+        parent="procesos_menu" action="proyecto_cobro_mensual_action" />
+
+    <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="40" />
+    <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"
+        action="cobro_mensual_consulta_wizard_action" />
+    <menuitem name="Análisis Cobros y Pagos" id="menu_asovec_estado_cuenta_analisis"
+        parent="consultas_menu"
+        action="action_asovec_estado_cuenta_analisis" />
 
 
     <menuitem name="Procesos" id="proceso_menu" parent="asovec_menu" />
-    
+
 
     <menuitem name="Informes" id="informe_menu" parent="asovec_menu" />
-    
-
 
 
 </odoo>

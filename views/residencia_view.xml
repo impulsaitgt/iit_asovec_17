@@ -9,6 +9,12 @@
                 <header>
                     <button name="action_nueva_lectura" type="object" string="Nueva Lectura"
                         class="btn-primary" />
+                    <button name="action_cargar_servicios_asociacion"
+                        type="object"
+                        string="Cargar Servicios de Asociación"
+                        class="btn-secondary"
+                        help="Borra los servicios actuales y carga todos los productos marcados como servicio de asociación." />
+
                 </header>
 
                 <sheet>
@@ -33,18 +39,20 @@
                         <field name="cliente_id" />
                         <field name="proyecto_aso_id" />
                         <field name="detalle" widget="text" placeholder="Escribe aquí..." />
-                        <field name="activo"/>
+                        <field name="activo" />
                     </group>
                     <notebook>
-                        <page string="Servicios relacionados" name="servicios_relacionados">
+                        <page string="Servicios con comportamiento especial para esta Residencia"
+                            name="servicios_relacionados">
                             <field name="residencia_lines" mode="tree,kanban">
                                 <tree editable="bottom" string="Servicios">
                                     <control>
                                         <create string="Agrega Servicio" />
                                     </control>
                                     <field name="producto_id" />
-                                    <field name="currency_id" invisible="1"/>
-                                    <field name="precio" />
+                                    <field name="currency_id" column_invisible="1" />
+                                    <field name="precio"
+                                        help="Deja en Cero si quieres excluirlo totalmente" />
                                 </tree>
                             </field>
                         </page>
@@ -66,7 +74,7 @@
                 <field name="detalle" />
                 <field name="cliente_id" />
                 <field name="proyecto_aso_id" />
-                <field name="activo"/>
+                <field name="activo" />
             </tree>
         </field>
     </record>
@@ -108,7 +116,7 @@
                     <filter string="Contacto" name="group_contacto"
                         context="{'group_by':'cliente_id'}" />
                     <filter string="Activo" name="group_activo"
-                        context="{'group_by':'activo'}" />                
+                        context="{'group_by':'activo'}" />
                 </group>
             </search>
         </field>
