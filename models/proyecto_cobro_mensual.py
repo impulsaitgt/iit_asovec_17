@@ -207,10 +207,16 @@ class ProyectoCobroMensual(models.Model):
                             "tax_ids": [(6, 0, [])],   # sin impuestos
                         }))
 
+                lectura_estado = "Error"
                 lectura = ContadorLine.search([("residencia_id", "=", r.id), ("anio","=", rec.year), ("mes","=", rec.month)])
+                if lectura:
+                    lectura_estado = "Lectura Valida"
+                else: 
+                    lectura_estado = "Sin Lectura"
 
                 if not r.activo:  
                     # Cuota para contadores inactivos
+                    lectura_estado = "Inactivo"
                     servicio = ProductTemplate.search([("aso_agua_inactivo", "=", True)])
                     servicio_inactivo = servicio.product_variant_id
                     invoice_lines.append((0, 0, {
@@ -270,7 +276,7 @@ class ProyectoCobroMensual(models.Model):
                 lines_vals.append((0, 0, {
                     "residencia_id": r.id,
                     "move_id": move.id,
-                    "con_lectura": bool(lectura),
+                    "con_lectura": lectura_estado,
                     "amount_total": move.amount_total,  # ok aunque sea related, no estorba
                 }))
 
@@ -409,7 +415,7 @@ class ProyectoCobroMensualLine(models.Model):
         readonly=True,
     )
 
-    con_lectura = fields.Boolean(string='Lectura Valida', default=False)
+    con_lectura = fields.Char(string='Lectura de Contador', default="Sin Lectura")
 
     @api.depends("amount_total", "amount_residual")
     def _compute_line_balance(self):

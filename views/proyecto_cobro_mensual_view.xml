@@ -108,7 +108,10 @@
                                         decoration-danger="move_state == 'cancel'" />
 
 
-                                    <field name="con_lectura"/>
+                                    <field name="con_lectura" widget="badge"
+                                            decoration-info="con_lectura == 'Inactivo'"
+                                            decoration-success="con_lectura == 'Lectura Valida'"
+                                            decoration-danger="con_lectura == 'Sin Lectura'" />
 <!--                                    widget="badge"
                                         options="{'true_label': 'Con lectura', 'false_label': 'Sin lectura'}"
                                         decoration-success="con_lectura"
@@ -132,7 +135,10 @@
                                         <field name="currency_id" invisible="1" />
                                         <field name="amount_total" readonly="1" />
                                         <field name="amount_balance" readonly="1" />
-                                        <field name="con_lectura" readonly="1" />
+                                        <field name="con_lectura" widget="badge" readonly="1"
+                                            decoration-info="con_lectura == 'Inactivo'"
+                                            decoration-success="con_lectura == 'Lectura Valida'"
+                                            decoration-danger="con_lectura == 'Sin Lectura'" />
                                     </group>
                                 </form>
                             </field>
