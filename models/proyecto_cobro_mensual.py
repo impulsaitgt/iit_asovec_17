@@ -378,6 +378,7 @@ class ProyectoCobroMensualLine(models.Model):
 
     # ✅ lo conservamos como lo tenías
     move_state = fields.Selection(related="move_id.state", string="Estado cargo", readonly=True, store=False)
+    state = fields.Selection(related="cobro_id.state", string="Estado de cobro", readonly=True, store=False)
 
     currency_id = fields.Many2one("res.currency", related="move_id.currency_id", store=True, readonly=True)
 
