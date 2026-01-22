@@ -367,7 +367,9 @@ class ProyectoCobroMensualLine(models.Model):
 
     proyecto_aso_id = fields.Many2one(related="cobro_id.proyecto_aso_id", string="Proyecto", store=True, readonly=True)
     residencia_id = fields.Many2one(comodel_name="asovec.residencia", string="Residencia", required=True, index=True)
-    cliente_id = fields.Many2one(related="residencia_id.cliente_id", string="Cliente", store=True, readonly=True)
+    #cliente_id = fields.Many2one(related="residencia_id.cliente_id", string="Cliente", store=True, readonly=True)
+
+    cliente_id = fields.Many2one(comodel_name="res.partner", string="Cliente", readonly=True, index=True)
 
     move_id = fields.Many2one(
         comodel_name="account.move",
@@ -378,6 +380,7 @@ class ProyectoCobroMensualLine(models.Model):
 
     # ✅ lo conservamos como lo tenías
     move_state = fields.Selection(related="move_id.state", string="Estado cargo", readonly=True, store=False)
+    payment_state = fields.Selection(related="move_id.payment_state", string="Estado de pago", readonly=True, store=False)
     state = fields.Selection(related="cobro_id.state", string="Estado de cobro", readonly=True, store=False)
 
     currency_id = fields.Many2one("res.currency", related="move_id.currency_id", store=True, readonly=True)
@@ -417,6 +420,14 @@ class ProyectoCobroMensualLine(models.Model):
     )
 
     con_lectura = fields.Char(string='Lectura de Contador', default="Sin Lectura")
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        for rec in records:
+            if rec.residencia_id and rec.residencia_id.cliente_id:
+                rec.cliente_id = rec.residencia_id.cliente_id.id
+        return records
 
     @api.depends("amount_total", "amount_residual")
     def _compute_line_balance(self):

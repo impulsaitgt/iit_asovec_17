@@ -24,9 +24,6 @@
               <div style="margin-bottom: 12px;">
                 <strong>Proyecto:</strong> <span t-esc="o.proyecto_aso_id.display_name"/><br/>
                 <strong>Residencia:</strong> <span t-esc="o.residencia_id.display_name"/><br/>
-                <t t-if="o.residencia_id.cliente_id">
-                  <strong>Cliente:</strong> <span t-esc="o.residencia_id.cliente_id.display_name"/><br/>
-                </t>
                 <strong>Fecha:</strong>
                 <span t-esc="o.create_date.strftime('%d/%m/%Y') if o.create_date else ''"/>
               </div>
@@ -43,9 +40,8 @@
                   <tr>
                     <th>Mes</th>
                     <th>Año</th>
-                    <th>Cobro</th>
                     <th>Cargo</th>
-                    <th>Estado cargo</th>
+                    <th>Residente</th>
                     <th class="text-end">Total</th>
                     <th class="text-end">Pagado</th>
                     <th class="text-end">Saldo</th>
@@ -57,9 +53,8 @@
                     <tr>
                       <td><span t-esc="l.month"/></td>
                       <td><span t-esc="l.year"/></td>
-                      <td><span t-esc="l.cobro_id.display_name"/></td>
                       <td><span t-esc="l.move_id.name if l.move_id else ''"/></td>
-                      <td><span t-esc="l.move_state"/></td>
+                      <td><span t-esc="l.cliente_id.name"/></td>
                       <td class="text-end">
                         <span t-esc="('%s %s' % (lsym, '{:,.2f}'.format(l.amount_total or 0.0))).strip()"/>
                       </td>

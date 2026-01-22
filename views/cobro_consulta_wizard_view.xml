@@ -12,6 +12,8 @@
             <group>
               <field name="proyecto_aso_id"/>
               <field name="residencia_id"/>
+              <field name="cliente_id" string="Residente" readonly="1"/>
+              <field name="solo_residente_actual" invisible="not residencia_id"/>
             </group>
 
             <footer>
