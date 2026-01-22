@@ -92,10 +92,7 @@
                                     <field name="residencia_id"
                                         options="{'no_create': True, 'no_open': False}" />
 
-                                    <field name="move_id"
-                                        string="Cargo"
-                                        context="{'aso_only_number': True}"
-                                        options="{'no_create': True, 'no_open': False}" />
+                                    <field name="move_id" string="Cargo"/>
 
                                     <field name="amount_total" readonly="1" />
                                     <field name="amount_residual" readonly="1" />
@@ -106,13 +103,15 @@
                                         decoration-info="move_state == 'draft'"
                                         decoration-success="move_state == 'posted'"
                                         decoration-danger="move_state == 'cancel'" />
-
-
+                                    <field name="payment_state" widget="badge"
+                                        decoration-info="payment_state == 'partial'"
+                                        decoration-success="payment_state == 'paid'"
+                                        decoration-danger="payment_state == 'not_paid'" />
                                     <field name="con_lectura" widget="badge"
-                                            decoration-info="con_lectura == 'Inactivo'"
-                                            decoration-success="con_lectura == 'Lectura Valida'"
-                                            decoration-danger="con_lectura == 'Sin Lectura'" />
-<!--                                    widget="badge"
+                                        decoration-info="con_lectura == 'Inactivo'"
+                                        decoration-success="con_lectura == 'Lectura Valida'"
+                                        decoration-danger="con_lectura == 'Sin Lectura'" />
+                                    <!--                                    widget="badge"
                                         options="{'true_label': 'Con lectura', 'false_label': 'Sin lectura'}"
                                         decoration-success="con_lectura"
                                         decoration-danger="not con_lectura" /> -->
@@ -130,6 +129,10 @@
                                             decoration-info="move_state == 'draft'"
                                             decoration-success="move_state == 'posted'"
                                             decoration-danger="move_state == 'cancel'" />
+                                        <field name="payment_state" widget="badge"
+                                            decoration-info="payment_state == 'partial'"
+                                            decoration-success="payment_state == 'paid'"
+                                            decoration-danger="payment_state == 'not_paid'" />
                                     </group>
                                     <group>
                                         <field name="currency_id" invisible="1" />

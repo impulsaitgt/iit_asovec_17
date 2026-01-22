@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError, UserError
 
 
 class Residencia(models.Model):
@@ -20,6 +20,37 @@ class Residencia(models.Model):
     _sql_constraints = [
         ('referencia_unica', 'unique(name)', "Esta residencia ya existe, por favor especifica otro Nombre/Codigo")
     ]
+
+    def write(self, vals):
+        # Solo validar si están intentando cambiar el cliente
+        if "cliente_id" in vals:
+            # Solo para residencias donde realmente cambia
+            residencias_a_validar = self.filtered(lambda r: r.cliente_id.id != vals.get("cliente_id"))
+
+            if residencias_a_validar:
+                # Suma saldo pendiente: asovec.proyecto_cobro_mensual con total_balance > 0
+                domain = [
+                    ("residencia_id", "in", residencias_a_validar.ids),
+                    ("amount_balance", ">", 0),
+                ]
+
+                data = self.env["asovec.proyecto_cobro_mensual_line"].read_group(
+                    domain=domain,
+                    fields=["amount_balance:sum", "residencia_id"],
+                    groupby=["residencia_id"],
+                )
+
+                saldo_por_res = {d["residencia_id"][0]: d["amount_balance"] for d in data}
+
+                # Si cualquiera tiene saldo, bloquear
+                con_saldo = [r for r in residencias_a_validar if saldo_por_res.get(r.id, 0) > 0]
+                if con_saldo:
+                    # mensaje simple (puedes hacerlo más detallado)
+                    raise UserError("No se puede cambiar el cliente.\n"
+                                    "La residencia tiene cobros pendientes.\n"
+                                    "Liquide el saldo antes de realizar el cambio.")
+
+        return super().write(vals)
 
     def _compute_contador_count(self):
         Contador = self.env['asovec.contador'].sudo()
