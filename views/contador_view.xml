@@ -9,16 +9,16 @@
         <field name="model">asovec.contador</field>
         <field name="arch" type="xml">
             <tree string="Contadores" default_order="active desc,id desc">
-                <field name="name"/>
-                <field name="residencia_id"/>
+                <field name="name" />
+                <field name="residencia_id" />
 
-                <field name="cliente_id" readonly="1"/>
-                <field name="proyecto_aso_id" readonly="1"/>
+                <field name="cliente_id" readonly="1" />
+                <field name="proyecto_aso_id" readonly="1" />
 
-                <field name="active"/>
-                <field name="ultima_fecha"/>
-                <field name="ultima_lectura"/>
-                <field name="ultimo_consumo"/>
+                <field name="active" />
+                <field name="ultima_fecha" />
+                <field name="ultima_lectura" />
+                <field name="ultimo_consumo" />
             </tree>
         </field>
     </record>
@@ -32,88 +32,147 @@
         <field name="arch" type="xml">
             <form string="Contador">
                 <header>
-                    <field name="tiene_inicial" invisible="1"/>
+                    <field name="tiene_inicial" invisible="1" />
 
-                    <button name="action_nueva_lectura" type="object" string="Nueva Lectura" class="btn-primary"/>
-                    <button name="action_registro_inicial" type="object" string="Registro Inicial"  class="btn-secondary" invisible="tiene_inicial"/>
+                    <button name="action_nueva_lectura" type="object" string="Nueva Lectura"
+                        class="btn-primary" />
+                    <button name="action_registro_inicial" type="object" string="Registro Inicial"
+                        class="btn-secondary" invisible="tiene_inicial" />
 
-                    <button name="action_activar" type="object" string="Activar" class="btn-secondary" invisible="active"/>
-                    <button name="action_desactivar" type="object" string="Desactivar" class="btn-secondary" invisible="not active"/>
-                    <field name="active" widget="boolean_toggle"/>
+                    <button name="action_activar" type="object" string="Activar"
+                        class="btn-secondary" invisible="active" />
+                    <button name="action_desactivar" type="object" string="Desactivar"
+                        class="btn-secondary" invisible="not active" />
+                    <field name="active" widget="boolean_toggle" />
                 </header>
 
                 <sheet>
                     <group>
                         <group>
-                            <field name="name"/>
-                            <field name="residencia_id" required="1"/>
+                            <field name="name" />
+                            <field name="residencia_id" required="1" />
 
-                            <field name="cliente_id" readonly="1"/>
-                            <field name="proyecto_aso_id" readonly="1"/>
+                            <field name="cliente_id" readonly="1" />
+                            <field name="proyecto_aso_id" readonly="1" />
                         </group>
                         <group string="Resumen" colspan="2">
-                            <field name="ultima_fecha" readonly="1"/>
-                            <field name="ultima_lectura" readonly="1"/>
-                            <field name="ultimo_consumo" readonly="1"/>
+                            <field name="ultima_fecha" readonly="1" />
+                            <field name="ultima_lectura" readonly="1" />
+                            <field name="ultimo_consumo" readonly="1" />
                         </group>
                     </group>
 
                     <notebook>
                         <page string="Lecturas">
                             <field name="line_ids">
-                                <tree default_order="periodo_date desc,id desc" create="0" edit="0" delete="0">
-                                    <field name="es_inicial" optional="hide"/>
+                                <!-- TREE embebido -->
+                                <tree default_order="periodo_date desc,id desc" create="0" edit="0"
+                                    delete="0">
+                                    <field name="es_inicial" optional="hide" />
 
-                                    <field name="mes" invisible="es_inicial"/>
-                                    <field name="anio" invisible="es_inicial"/>
+                                    <field name="mes" invisible="es_inicial" />
+                                    <field name="anio" invisible="es_inicial" />
 
-                                    <field name="lectura"/>
-                                    <field name="lectura_anterior" readonly="1"/>
-                                    <field name="consumo" readonly="1"/>
+                                    <field name="lectura" />
+                                    <field name="lectura_anterior" readonly="1" />
+                                    <field name="consumo" readonly="1" />
 
-                                    <field name="cliente_id" readonly="1" optional="hide"/>
-                                    <field name="proyecto_aso_id" readonly="1" optional="hide"/>
+                                    <field name="cliente_id" readonly="1" optional="hide" />
+                                    <field name="proyecto_aso_id" readonly="1" optional="hide" />
 
-                                    <field name="currency_id" invisible="1"/>
-                                    <field name="base" readonly="1"/>
-                                    <field name="metros_extras" readonly="1"/>
-                                    <field name="pago_extra" readonly="1"/>
-                                    <field name="pago_total" readonly="1"/>
+                                    <field name="currency_id" invisible="1" />
+                                    <field name="base" readonly="1" />
+                                    <field name="metros_extras" readonly="1" />
+                                    <field name="pago_extra" readonly="1" />
+                                    <field name="pago_total" readonly="1" />
+
+                                    <!-- Badges -->
+                                    <field name="invoice_status_badge"
+                                        widget="badge"
+                                        decoration-success="invoice_status_badge == 'invoiced'"
+                                        decoration-danger="invoice_status_badge == 'not_invoiced'" />
+
+                                    <field name="payment_status_badge"
+                                        widget="badge"
+                                        decoration-success="payment_status_badge == 'paid'"
+                                        decoration-danger="payment_status_badge == 'unpaid'"
+                                        invisible="not invoice_move_id" />
+
+                                    <field name="invoice_move_id" optional="hide"
+                                        invisible="not invoice_move_id" />
                                 </tree>
 
+                                <!-- FORM embebido -->
                                 <form string="Lectura">
+                                    <header>
+                                        <button name="action_view_invoice"
+                                            type="object"
+                                            string="Ver Factura"
+                                            class="btn-primary"
+                                            invisible="not invoice_move_id" />
+
+                                        <button name="action_view_invoice_lines"
+                                            type="object"
+                                            string="Ver Líneas"
+                                            class="btn-secondary"
+                                            invisible="invoice_line_count == 0" />
+
+                                        <field name="invoice_line_count" invisible="1" />
+                                        <field name="invoice_move_id" invisible="1" />
+                                    </header>
+
                                     <sheet>
                                         <group>
                                             <group>
-                                                <field name="es_inicial" readonly="1"/>
-                                                <field name="mes" invisible="es_inicial" readonly="1"/>
-                                                <field name="anio" invisible="es_inicial" readonly="1"/>
-                                                <field name="lectura" autofocus="1" readonly="1"/>
+                                                <field name="es_inicial" readonly="1" />
+                                                <field name="mes" invisible="es_inicial"
+                                                    readonly="1" />
+                                                <field name="anio" invisible="es_inicial"
+                                                    readonly="1" />
+                                                <field name="lectura" autofocus="1" readonly="1" />
                                             </group>
                                             <group>
-                                                <field name="lectura_anterior" readonly="1"/>
-                                                <field name="consumo" readonly="1"/>
+                                                <field name="lectura_anterior" readonly="1" />
+                                                <field name="consumo" readonly="1" />
                                             </group>
                                         </group>
 
                                         <group string="Residencia">
                                             <group>
-                                                <field name="residencia_id" readonly="1"/>
-                                                <field name="cliente_id" readonly="1"/>
+                                                <field name="residencia_id" readonly="1" />
+                                                <field name="cliente_id" readonly="1" />
                                             </group>
                                             <group>
-                                                <field name="proyecto_aso_id" readonly="1"/>
+                                                <field name="proyecto_aso_id" readonly="1" />
                                             </group>
                                         </group>
 
                                         <group string="Cobro">
                                             <group>
-                                                <field name="base" readonly="1"/>
-                                                <field name="metros_extras" readonly="1"/>
+                                                <field name="base" readonly="1" />
+                                                <field name="metros_extras" readonly="1" />
                                             </group>
                                             <group>
-                                                <field name="pago_extra" readonly="1"/>
-                                                <field name="pago_total" readonly="1"/>
+                                                <field name="pago_extra" readonly="1" />
+                                                <field name="pago_total" readonly="1" />
+                                            </group>
+                                        </group>
+
+                                        <group string="Facturación">
+                                            <group>
+                                                <field name="invoice_status_badge"
+                                                    widget="badge"
+                                                    decoration-success="invoice_status_badge == 'invoiced'"
+                                                    decoration-danger="invoice_status_badge == 'not_invoiced'" />
+                                                <field name="invoice_move_id" readonly="1"
+                                                    invisible="not invoice_move_id" />
+                                            </group>
+                                            <group>
+                                                <field name="payment_status_badge"
+                                                    widget="badge"
+                                                    decoration-success="payment_status_badge == 'paid'"
+                                                    decoration-danger="payment_status_badge == 'unpaid'"
+                                                    invisible="not invoice_move_id" />
                                             </group>
                                         </group>
                                     </sheet>
@@ -134,31 +193,28 @@
         <field name="model">asovec.contador</field>
         <field name="arch" type="xml">
             <search string="Buscar Contadores">
-                <!-- Quick search -->
-                <field name="name"/>
-                <field name="residencia_id"/>
-                <field name="proyecto_aso_id"/>
-                <field name="cliente_id"/>
+                <field name="name" />
+                <field name="residencia_id" />
+                <field name="proyecto_aso_id" />
+                <field name="cliente_id" />
 
-                <separator/>
+                <separator />
 
-                <!-- Filters -->
-                <filter string="Activos" name="activos" domain="[('active','=',True)]"/>
-                <filter string="Inactivos" name="inactivos" domain="[('active','=',False)]"/>
-                <filter string="Con inicial" name="con_inicial" domain="[('tiene_inicial','=',True)]"/>
+                <filter string="Activos" name="activos" domain="[('active','=',True)]" />
+                <filter string="Inactivos" name="inactivos" domain="[('active','=',False)]" />
+                <filter string="Con inicial" name="con_inicial"
+                    domain="[('tiene_inicial','=',True)]" />
 
-                <separator/>
+                <separator />
 
-                <!-- Group By -->
                 <group expand="0" string="Agrupar por">
                     <filter string="Residencia" name="group_residencia"
-                            context="{'group_by':'residencia_id'}"/>
+                        context="{'group_by':'residencia_id'}" />
                     <filter string="Proyecto" name="group_proyecto"
-                            context="{'group_by':'proyecto_aso_id'}"/>
+                        context="{'group_by':'proyecto_aso_id'}" />
                     <filter string="Contacto" name="group_contacto"
-                            context="{'group_by':'cliente_id'}"/>
-                    <filter string="Activo" name="group_active"
-                            context="{'group_by':'active'}"/>
+                        context="{'group_by':'cliente_id'}" />
+                    <filter string="Activo" name="group_active" context="{'group_by':'active'}" />
                 </group>
             </search>
         </field>
@@ -172,23 +228,38 @@
         <field name="model">asovec.contador.lines</field>
         <field name="arch" type="xml">
             <tree string="Lecturas" default_order="periodo_date desc,id desc">
-                <field name="contador_id"/>
-                <field name="residencia_id"/>
-                <field name="cliente_id" readonly="1" optional="hide"/>
-                <field name="proyecto_aso_id" readonly="1" optional="hide"/>
+                <field name="contador_id" />
+                <field name="residencia_id" />
+                <field name="cliente_id" readonly="1" optional="hide" />
+                <field name="proyecto_aso_id" readonly="1" optional="hide" />
 
-                <field name="es_inicial" optional="hide"/>
-                <field name="mes" invisible="es_inicial"/>
-                <field name="anio" invisible="es_inicial"/>
+                <field name="es_inicial" optional="hide" />
+                <field name="mes" invisible="es_inicial" />
+                <field name="anio" invisible="es_inicial" />
 
-                <field name="lectura"/>
-                <field name="lectura_anterior"/>
-                <field name="consumo"/>
-                <field name="currency_id" invisible="1"/>    
-                <field name="base"/>
-                <field name="metros_extras"/>
-                <field name="pago_extra"/>
-                <field name="pago_total"/>
+                <field name="lectura" />
+                <field name="lectura_anterior" />
+                <field name="consumo" />
+                <field name="currency_id" invisible="1" />
+                <field name="base" />
+                <field name="metros_extras" />
+                <field name="pago_extra" />
+                <field name="pago_total" />
+
+                <!-- Badges -->
+                <field name="invoice_status_badge"
+                    widget="badge"
+                    decoration-success="invoice_status_badge == 'invoiced'"
+                    decoration-danger="invoice_status_badge == 'not_invoiced'"
+                    invisible="es_inicial" />
+
+                <field name="payment_status_badge"
+                    widget="badge"
+                    decoration-success="payment_status_badge == 'paid'"
+                    decoration-danger="payment_status_badge == 'unpaid'"
+                    invisible="es_inicial" />
+
+                <field name="invoice_move_id" optional="hide" invisible="not invoice_move_id" />
             </tree>
         </field>
     </record>
@@ -201,34 +272,69 @@
         <field name="model">asovec.contador.lines</field>
         <field name="arch" type="xml">
             <form string="Lectura">
+                <header>
+                    <button name="action_view_invoice"
+                        type="object"
+                        string="Ver Factura"
+                        class="btn-primary"
+                        invisible="not invoice_move_id" />
+
+                    <button name="action_view_invoice_lines"
+                        type="object"
+                        string="Ver Líneas"
+                        class="btn-secondary"
+                        invisible="invoice_line_count == 0" />
+
+                    <field name="invoice_line_count" invisible="1" />
+                    <field name="invoice_move_id" invisible="1" />
+                </header>
+
                 <sheet>
                     <group>
                         <group>
-                            <field name="contador_id" required="1"/>
-                            <field name="residencia_id" readonly="1"/>
-                            <field name="cliente_id" readonly="1"/>
-                            <field name="proyecto_aso_id" readonly="1"/>
-
-                            <field name="es_inicial"/>
-                            <field name="mes" invisible="es_inicial"/>
-                            <field name="anio" invisible="es_inicial"/>
+                            <field name="lectura" required="1" autofocus="1" />
+                            <field name="lectura_anterior" readonly="1" />
+                            <field name="consumo" readonly="1" />
                         </group>
                         <group>
-                            <field name="lectura" required="1" autofocus="1"/>
-                            <field name="lectura_anterior" readonly="1"/>
-                            <field name="consumo" readonly="1"/>
+                            <field name="contador_id" required="1" />
+                            <field name="residencia_id" readonly="1" />
+                            <field name="cliente_id" readonly="1" />
+                            <field name="proyecto_aso_id" readonly="1" />
+
+                            <field name="es_inicial" />
+                            <field name="mes" invisible="es_inicial" />
+                            <field name="anio" invisible="es_inicial" />
                         </group>
                     </group>
 
                     <group string="Cobro">
                         <group>
-                            <field name="base" readonly="1"/>
-                            <field name="metros_extras" readonly="1"/>
+                            <field name="base" readonly="1" />
+                            <field name="metros_extras" readonly="1" />
                         </group>
                         <group>
-                            <field name="currency_id" invisible="1"/>
-                            <field name="pago_extra" readonly="1"/>
-                            <field name="pago_total" readonly="1"/>
+                            <field name="currency_id" invisible="1" />
+                            <field name="pago_extra" readonly="1" />
+                            <field name="pago_total" readonly="1" />
+                        </group>
+                    </group>
+
+                    <group string="Facturación">
+                        <group>
+                            <field name="invoice_status_badge"
+                                widget="badge"
+                                decoration-success="invoice_status_badge == 'invoiced'"
+                                decoration-danger="invoice_status_badge == 'not_invoiced'" />
+                            <field name="invoice_move_id" readonly="1"
+                                invisible="not invoice_move_id" />
+                        </group>
+                        <group>
+                            <field name="payment_status_badge"
+                                widget="badge"
+                                decoration-success="payment_status_badge == 'paid'"
+                                decoration-danger="payment_status_badge == 'unpaid'"
+                                invisible="not invoice_move_id" />
                         </group>
                     </group>
 
@@ -237,7 +343,7 @@
         </field>
     </record>
 
-     <!-- ===================== -->
+    <!-- ===================== -->
     <!--  LECTURAS - SEARCH    -->
     <!-- ===================== -->
     <record id="asovec_contador_lines_search_view" model="ir.ui.view">
@@ -245,28 +351,25 @@
         <field name="model">asovec.contador.lines</field>
         <field name="arch" type="xml">
             <search string="Buscar Lecturas">
-                <!-- Quick search -->
-                <field name="contador_id"/>
-                <field name="residencia_id"/>
-                <field name="proyecto_aso_id"/>
-                <field name="cliente_id"/>
+                <field name="contador_id" />
+                <field name="residencia_id" />
+                <field name="proyecto_aso_id" />
+                <field name="cliente_id" />
 
-                <separator/>
+                <separator />
 
-                <!-- Filters -->
-                <filter string="Mensuales" name="mensuales" domain="[('es_inicial','=',False)]"/>
-                <filter string="Inicial" name="inicial" domain="[('es_inicial','=',True)]"/>
+                <filter string="Mensuales" name="mensuales" domain="[('es_inicial','=',False)]" />
+                <filter string="Inicial" name="inicial" domain="[('es_inicial','=',True)]" />
 
-                <separator/>
+                <separator />
 
-                <!-- Group By -->
                 <group expand="0" string="Agrupar por">
                     <filter string="Residencia" name="group_residencia"
-                            context="{'group_by':'residencia_id'}"/>
+                        context="{'group_by':'residencia_id'}" />
                     <filter string="Proyecto" name="group_proyecto"
-                            context="{'group_by':'proyecto_aso_id'}"/>
+                        context="{'group_by':'proyecto_aso_id'}" />
                     <filter string="Contador" name="group_contador"
-                            context="{'group_by':'contador_id'}"/>
+                        context="{'group_by':'contador_id'}" />
                 </group>
             </search>
         </field>

@@ -237,15 +237,19 @@ class ProyectoCobroMensual(models.Model):
                             cobro_base = rec.proyecto_aso_id.cobro_base
                         servicio = ProductTemplate.search([("aso_agua_base", "=", True)])
                         servicio_base = servicio.product_variant_id
-                        invoice_lines.append((0, 0, {
+                        vals_line = {
                             "product_id": servicio_base.id,
                             "name": servicio.name,
                             "quantity": 1.0,
                             "price_unit": cobro_base,
                             "tax_ids": [(6, 0, [])],   # sin impuestos
-                        }))
+                        }
+                        if lectura:
+                            vals_line["contador_line_id"] = lectura.id
 
-                        # Cuota base para contadores
+                        invoice_lines.append((0, 0, vals_line))
+
+                        # pago extra para contadores
                         if lectura:
                             cobro_exceso = lectura.pago_extra
                         else:

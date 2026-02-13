@@ -140,6 +140,9 @@ class Residencia(models.Model):
         # opcional: notificación
         return {'type': 'ir.actions.client', 'tag': 'reload'}
 
+    def action_print_estado_cuenta_lecturas(self):
+        self.ensure_one()
+        return self.env.ref("iit_asovec.action_report_estado_cuenta_residencia_lecturas").report_action(self)
 
 
 class ResidenciaLines(models.Model):
