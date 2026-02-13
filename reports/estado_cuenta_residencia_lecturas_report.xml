@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Acción del reporte -->
+  <record id="action_report_estado_cuenta_residencia_lecturas" model="ir.actions.report">
+    <field name="name">Estado de Cuenta (Lecturas)</field>
+    <field name="model">asovec.residencia</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">iit_asovec.report_estado_cuenta_residencia_lecturas</field>
+    <field name="report_file">iit_asovec.report_estado_cuenta_residencia_lecturas</field>
+    <field name="print_report_name">'Estado de Cuenta - %s' % (object.name)</field>
+  </record>
+
+  <!-- Template QWeb -->
+  <template id="report_estado_cuenta_residencia_lecturas">
+    <t t-call="web.html_container">
+      <t t-foreach="report_docs" t-as="r">
+        <t t-call="web.external_layout">
+          <div class="page">
+
+            <h2 style="margin-bottom: 8px;">Estado de cuenta por residencia (Lecturas)</h2>
+
+            <div style="margin-bottom: 10px;">
+              <div>
+                <strong>Residencia:</strong>
+                <span t-esc="r['residencia'].name" />
+              </div>
+              <div>
+                <strong>Dirección:</strong>
+                <span t-esc="r['direccion']" />
+              </div>
+              <div>
+                <strong>Proyecto:</strong>
+                <span t-esc="r['proyecto'] and r['proyecto'].display_name or ''" />
+              </div>
+              <div>
+                <strong>Contador activo:</strong>
+                <span t-esc="r['contador'] and r['contador'].name or 'N/A'" />
+              </div>
+            </div>
+
+            <div style="margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+              <strong>Saldo pendiente (solo lecturas):</strong>
+              <span t-esc="r['saldo_pendiente']"
+                t-options="{'widget': 'monetary', 'display_currency': r['currency']}" />
+            </div>
+
+            <table class="table table-sm o_main_table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th>Período</th>
+                  <th>Lectura</th>
+                  <th>Consumo</th>
+                  <th style="text-align:right;">Monto</th>
+                  <th style="text-align:center;">Facturación</th>
+                  <th style="text-align:center;">Pago</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="r['lineas']" t-as="ln">
+                  <tr>
+                    <td>
+                      <span t-esc="ln['lectura'].periodo_date or ''" />
+                    </td>
+                    <td>
+                      <span t-esc="ln['lectura'].lectura" />
+                    </td>
+                    <td>
+                      <span t-esc="ln['lectura'].consumo" />
+                    </td>
+
+                    <td style="text-align:right;">
+                      <span t-esc="ln['monto']"
+                        t-options="{'widget': 'monetary', 'display_currency': r['currency']}" />
+                    </td>
+
+                    <td style="text-align:center;">
+                      <t t-set="inv" t-value="ln['lectura'].invoice_status_badge" />
+                      <span
+                        t-attf-class="badge #{'bg-success' if inv == 'invoiced' else 'bg-danger'}">
+                        <t
+                          t-esc="dict(ln['lectura']._fields['invoice_status_badge'].selection).get(inv)" />
+                      </span>
+                    </td>
+
+                    <td style="text-align:center;">
+                      <t t-set="pay" t-value="ln['lectura'].payment_status_badge" />
+                      <span t-attf-class="badge #{'bg-success' if pay == 'paid' else 'bg-danger'}">
+                        <t
+                          t-esc="dict(ln['lectura']._fields['payment_status_badge'].selection).get(pay)" />
+                      </span>
+                    </td>
+                  </tr>
+                </t>
+
+                <t t-if="not r['lineas']">
+                  <tr>
+                    <td colspan="6" style="text-align:center; padding: 10px;">
+                      No hay lecturas para el contador activo.
+                    </td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+
+          </div>
+        </t>
+      </t>
+    </t>
+  </template>
+
+</odoo>

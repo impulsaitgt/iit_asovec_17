@@ -23,6 +23,7 @@
         'views/proyecto_cobro_mensual_line_view.xml',
         'views/cobro_consulta_wizard_view.xml',
         'views/menu_view.xml',
-        'reports/estado_cuenta_report.xml'
+        'reports/estado_cuenta_report.xml',
+        'reports/estado_cuenta_residencia_lecturas_report.xml'
     ]
 }

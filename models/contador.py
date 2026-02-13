@@ -5,18 +5,9 @@ from odoo.exceptions import ValidationError
 
 
 MONTH_SELECTION = [
-    ('1', 'Enero'),
-    ('2', 'Febrero'),
-    ('3', 'Marzo'),
-    ('4', 'Abril'),
-    ('5', 'Mayo'),
-    ('6', 'Junio'),
-    ('7', 'Julio'),
-    ('8', 'Agosto'),
-    ('9', 'Septiembre'),
-    ('10', 'Octubre'),
-    ('11', 'Noviembre'),
-    ('12', 'Diciembre'),
+    ('1', 'Enero'), ('2', 'Febrero'), ('3', 'Marzo'), ('4', 'Abril'),
+    ('5', 'Mayo'), ('6', 'Junio'), ('7', 'Julio'), ('8', 'Agosto'),
+    ('9', 'Septiembre'), ('10', 'Octubre'), ('11', 'Noviembre'), ('12', 'Diciembre'),
 ]
 
 
@@ -27,9 +18,18 @@ class Contador(models.Model):
 
     name = fields.Char(string="Contador", required=True)
     active = fields.Boolean(string="Activo", default=True)
-    residencia_id = fields.Many2one('asovec.residencia', string="Residencia", required=True, ondelete='cascade', index=True)
-    cliente_id = fields.Many2one(comodel_name='res.partner', string="Contacto", related='residencia_id.cliente_id', readonly=True, store=False)
-    proyecto_aso_id = fields.Many2one(comodel_name='asovec.proyecto_aso', string="Proyecto", related='residencia_id.proyecto_aso_id', readonly=True, store=False)
+    residencia_id = fields.Many2one(
+        'asovec.residencia', string="Residencia", required=True,
+        ondelete='cascade', index=True
+    )
+    cliente_id = fields.Many2one(
+        comodel_name='res.partner', string="Contacto",
+        related='residencia_id.cliente_id', readonly=True, store=False
+    )
+    proyecto_aso_id = fields.Many2one(
+        comodel_name='asovec.proyecto_aso', string="Proyecto",
+        related='residencia_id.proyecto_aso_id', readonly=True, store=False
+    )
 
     line_ids = fields.One2many('asovec.contador.lines', 'contador_id', string='Lecturas')
 
@@ -43,8 +43,6 @@ class Contador(models.Model):
     def _compute_tiene_inicial(self):
         for rec in self:
             rec.tiene_inicial = any(rec.line_ids.filtered('es_inicial'))
-
-
 
     @api.depends('line_ids.periodo_date', 'line_ids.lectura', 'line_ids.consumo', 'line_ids.es_inicial')
     def _compute_ultima(self):
@@ -139,11 +137,9 @@ class ContadorLine(models.Model):
 
     mes = fields.Selection(MONTH_SELECTION, string="Mes")
     anio = fields.Integer(string="Año")
-
     periodo_date = fields.Date(string="Período", compute="_compute_periodo_date", store=True, index=True)
 
     lectura = fields.Float(string="Lectura actual", required=True, default=0.0)
-
     lectura_anterior = fields.Float(string="Lectura anterior", default=0.0, readonly=True)
     consumo = fields.Float(string="Consumo", default=0.0, readonly=True)
 
@@ -155,6 +151,81 @@ class ContadorLine(models.Model):
     pago_extra = fields.Monetary(string="Pago extra", default=0.0, currency_field="currency_id", readonly=True)
     pago_total = fields.Monetary(string="Pago total", default=0.0, currency_field="currency_id", readonly=True)
 
+    # -------------------------
+    # Facturación / pago (badges estilo Odoo)
+    # -------------------------
+    invoice_line_ids = fields.One2many(
+        comodel_name="account.move.line",
+        inverse_name="contador_line_id",
+        string="Líneas de factura",
+        readonly=True,
+    )
+    invoice_line_count = fields.Integer(string="Líneas", compute="_compute_invoice_info", readonly=True)
+
+    invoice_move_id = fields.Many2one(
+        comodel_name="account.move",
+        string="Factura",
+        compute="_compute_invoice_info",
+        readonly=True,
+    )
+
+    invoice_status_badge = fields.Selection(
+        selection=[("not_invoiced", "No facturado"), ("invoiced", "Facturado")],
+        string="Facturación",
+        compute="_compute_invoice_info",
+        readonly=True,
+    )
+
+    payment_status_badge = fields.Selection(
+        selection=[("unpaid", "No pagado"), ("paid", "Pagado")],
+        string="Pago",
+        compute="_compute_invoice_info",
+        readonly=True,
+    )
+
+    @api.depends("invoice_line_ids.move_id.payment_state")
+    def _compute_invoice_info(self):
+        for rec in self:
+            lines = rec.invoice_line_ids
+            rec.invoice_line_count = len(lines)
+
+            if lines:
+                line = lines.sorted(lambda l: (l.move_id.id or 0, l.id))[0]
+                rec.invoice_move_id = line.move_id
+
+                rec.invoice_status_badge = "invoiced"
+                rec.payment_status_badge = "paid" if rec.invoice_move_id.payment_state == "paid" else "unpaid"
+            else:
+                rec.invoice_move_id = False
+                rec.invoice_status_badge = "not_invoiced"
+                rec.payment_status_badge = "unpaid"
+
+    def action_view_invoice(self):
+        self.ensure_one()
+        if not self.invoice_move_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Factura",
+            "res_model": "account.move",
+            "view_mode": "form",
+            "res_id": self.invoice_move_id.id,
+        }
+
+    def action_view_invoice_lines(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Líneas de factura",
+            "res_model": "account.move.line",
+            "view_mode": "tree,form",
+            "domain": [("contador_line_id", "=", self.id)],
+            "context": {"search_default_group_by_move_id": 1},
+        }
+
+    # -------------------------
+    # Período
+    # -------------------------
     @api.depends('mes', 'anio', 'es_inicial')
     def _compute_periodo_date(self):
         for rec in self:
@@ -169,7 +240,6 @@ class ContadorLine(models.Model):
     # -------------------------
     # Helpers período
     # -------------------------
-
     @api.model
     def _last_mensual(self, contador_id, exclude_id=None):
         domain = [('contador_id', '=', contador_id), ('es_inicial', '=', False), ('periodo_date', '!=', False)]
@@ -197,9 +267,8 @@ class ContadorLine(models.Model):
         return str(m + 1), y
 
     # -------------------------
-    # Validaciones (FIX NewId)
+    # Validaciones
     # -------------------------
-
     @api.model
     def _validate_periodo_vals(self, vals, exclude_id=None):
         contador_id = vals.get('contador_id')
@@ -245,9 +314,7 @@ class ContadorLine(models.Model):
     # -------------------------
     # Cálculos
     # -------------------------
-
     def _calcular_campos_linea(self, contador, lectura_actual, lectura_anterior, es_inicial=False):
-        # ✅ Si es registro inicial: NO calcular nada, todo en cero
         if es_inicial:
             return {
                 'lectura_anterior': 0.0,
@@ -287,7 +354,6 @@ class ContadorLine(models.Model):
     # -------------------------
     # PREVIEW
     # -------------------------
-
     @api.onchange('contador_id', 'es_inicial', 'mes', 'anio')
     def _onchange_periodo_preview(self):
         for rec in self:
@@ -355,7 +421,6 @@ class ContadorLine(models.Model):
     # -------------------------
     # CREATE / WRITE
     # -------------------------
-
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -368,7 +433,6 @@ class ContadorLine(models.Model):
 
             self._validate_periodo_vals(vals, exclude_id=None)
 
-            # lectura anterior:
             if es_inicial:
                 lectura_anterior = 0.0
             else:
@@ -379,8 +443,6 @@ class ContadorLine(models.Model):
                     ini = self._get_inicial(contador_id)
                     lectura_anterior = (ini.lectura or 0.0) if ini else 0.0
 
-            # En inicial no hace falta validar contra anterior (siempre 0),
-            # pero lo dejamos por seguridad si alguien manda valores raros.
             if (lectura_actual or 0.0) < (lectura_anterior or 0.0):
                 raise ValidationError(
                     f"La lectura ({lectura_actual}) no puede ser menor que la lectura anterior ({lectura_anterior})."
@@ -421,7 +483,6 @@ class ContadorLine(models.Model):
                 es_inicial=is_ini
             )
 
-            # Si es inicial: forzar ceros también al guardar
             super(ContadorLine, rec).write({
                 'lectura_anterior': calc['lectura_anterior'],
                 'consumo': calc['consumo'],

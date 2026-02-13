@@ -14,7 +14,11 @@
                         string="Cargar Servicios de Asociación"
                         class="btn-secondary"
                         help="Borra los servicios actuales y carga todos los productos marcados como servicio de asociación." />
-
+                    <button name="action_print_estado_cuenta_lecturas"
+                        type="object"
+                        string="Estado de Cuenta (Lecturas)"
+                        class="btn-primary"
+                        icon="fa-file-pdf-o" />
                 </header>
 
                 <sheet>
