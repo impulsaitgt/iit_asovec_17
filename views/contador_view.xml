@@ -287,6 +287,13 @@
 
                     <field name="invoice_line_count" invisible="1" />
                     <field name="invoice_move_id" invisible="1" />
+                    <button name="action_save" 
+                        string="💾 Guardar" 
+                        type="object" 
+                        class="btn-primary"/>
+<!--                     <button string="Cancelar"
+                        class="btn-secondary"
+                        special="cancel"/> -->
                 </header>
 
                 <sheet>
@@ -315,7 +322,13 @@
                         </group>
                         <group>
                             <field name="currency_id" invisible="1" />
-                            <field name="pago_extra" readonly="1" />
+                            <field name="pago_extra" readonly="1" decoration-danger="pago_extra > 0"/>
+                            <field  name="foto" 
+                                    widget="image"
+                                    options="{'size': [200, 200]}"
+                                    filename="foto_filename"
+                                    invisible="pago_extra == 0"/>
+                            <field name="foto_filename" invisible="1"/>
                             <field name="pago_total" readonly="1" />
                         </group>
                     </group>

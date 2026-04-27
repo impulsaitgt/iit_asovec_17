@@ -151,6 +151,9 @@ class ContadorLine(models.Model):
     pago_extra = fields.Monetary(string="Pago extra", default=0.0, currency_field="currency_id", readonly=True)
     pago_total = fields.Monetary(string="Pago total", default=0.0, currency_field="currency_id", readonly=True)
 
+    foto = fields.Binary(string="Foto", attachment=True)
+    foto_filename = fields.Char(string="Nombre foto")  # opcional pero recomendado
+
     # -------------------------
     # Facturación / pago (badges estilo Odoo)
     # -------------------------
@@ -222,6 +225,9 @@ class ContadorLine(models.Model):
             "domain": [("contador_line_id", "=", self.id)],
             "context": {"search_default_group_by_move_id": 1},
         }
+
+    def action_save(self):
+        return True
 
     # -------------------------
     # Período
