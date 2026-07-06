@@ -15,6 +15,7 @@
                 <field name="total_to_charge" />
                 <field name="total_paid" />
                 <field name="total_balance" />
+                <field name="fecha_confirmacion" optional="hide" />
                 <field name="state" string="Estado"
                     widget="badge"
                     decoration-danger="state == 'cancel'"
@@ -32,10 +33,12 @@
         <field name="arch" type="xml">
             <form string="Cobro mensual">
                 <header>
-                    <!-- Botón Generar: solo en borrador -->
+                    <!-- Botón Generar: solo en borrador. Completa las residencias que aún no
+                         tienen cargo y regenera (borra y vuelve a crear) las que siguen en
+                         borrador o canceladas; si alguna ya está posteada, se detiene con error. -->
                     <button name="action_generate"
                         type="object"
-                        string="Generar"
+                        string="Completar Faltantes"
                         class="btn-primary"
                         invisible="state != 'draft'" />
 
@@ -44,13 +47,6 @@
                         type="object"
                         string="Confirmar"
                         class="btn-primary"
-                        invisible="state != 'draft'" />
-
-                    <!-- Botón Cancelar: solo en borrador -->
-                    <button name="action_cancel"
-                        type="object"
-                        string="Cancelar"
-                        class="btn-secondary"
                         invisible="state != 'draft'" />
 
                     <!-- Opcional: regresar a borrador -->
@@ -76,6 +72,7 @@
                             <field name="proyecto_aso_id" options="{'no_create': False}" />
                             <field name="month" />
                             <field name="year" />
+                            <field name="fecha_confirmacion" invisible="not fecha_confirmacion" />
                         </group>
                         <group>
                             <field name="currency_id" invisible="1" />
@@ -120,6 +117,15 @@
                                 <!-- Este form es de la LÍNEA, no de la residencia -->
                                 <form string="Detalle de residencia" edit="false" create="false"
                                     delete="false">
+                                    <header>
+                                        <button name="action_imprimir_recibo"
+                                            type="object"
+                                            string="Imprimir Recibo"
+                                            class="btn-primary"
+                                            icon="fa-file-pdf-o"
+                                            invisible="not contador_line_id" />
+                                    </header>
+                                    <field name="contador_line_id" invisible="1" />
                                     <group>
                                         <field name="residencia_id" readonly="1"
                                             options="{'no_create': True, 'no_open': False}" />
@@ -142,6 +148,16 @@
                                             decoration-info="con_lectura == 'Inactivo'"
                                             decoration-success="con_lectura == 'Lectura Valida'"
                                             decoration-danger="con_lectura == 'Sin Lectura'" />
+                                    </group>
+                                    <group string="Lectura" invisible="not contador_line_id">
+                                        <field name="lectura_anterior" readonly="1" />
+                                        <field name="lectura_actual" readonly="1" />
+                                        <field name="exceso" readonly="1" />
+                                    </group>
+                                    <group string="Cobro" invisible="not contador_line_id">
+                                        <field name="base" readonly="1" />
+                                        <field name="pago_extra" readonly="1" />
+                                        <field name="pago_total" readonly="1" />
                                     </group>
                                 </form>
                             </field>

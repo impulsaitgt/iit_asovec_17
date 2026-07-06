@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_asovec_proceso_estado_cuenta_csv_wizard_form" model="ir.ui.view">
+      <field name="name">asovec.proceso_estado_cuenta_csv_wizard.form</field>
+      <field name="model">asovec.proceso_estado_cuenta_csv_wizard</field>
+      <field name="arch" type="xml">
+        <form string="Generar CSV de Estado de Cuenta (Banco)">
+          <sheet>
+            <group>
+              <field name="mes" />
+              <field name="anio" />
+            </group>
+
+            <group invisible="not file_data">
+              <field name="file_name" invisible="1" />
+              <field name="file_data"
+                filename="file_name"
+                widget="binary"
+                readonly="1"
+                string="Archivo generado" />
+            </group>
+
+            <footer>
+              <button name="action_generar" type="object" string="Generar" class="btn-primary" />
+              <button string="Cerrar" special="cancel" class="btn-secondary" />
+            </footer>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+  </data>
+</odoo>

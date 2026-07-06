@@ -11,6 +11,16 @@ MONTH_SELECTION = [
 ]
 
 
+def mes_anio_anterior(today):
+    """Devuelve (mes, anio) del mes anterior a `today`, como (str, int)."""
+    mes = today.month - 1
+    anio = today.year
+    if mes < 1:
+        mes = 12
+        anio -= 1
+    return str(mes), anio
+
+
 class Contador(models.Model):
     _name = 'asovec.contador'
     _description = 'Contador por Residencia'
@@ -151,6 +161,9 @@ class ContadorLine(models.Model):
     pago_extra = fields.Monetary(string="Pago extra", default=0.0, currency_field="currency_id", readonly=True)
     pago_total = fields.Monetary(string="Pago total", default=0.0, currency_field="currency_id", readonly=True)
 
+    foto = fields.Binary(string="Foto", attachment=True)
+    foto_filename = fields.Char(string="Nombre foto")  # opcional pero recomendado
+
     # -------------------------
     # Facturación / pago (badges estilo Odoo)
     # -------------------------
@@ -169,6 +182,16 @@ class ContadorLine(models.Model):
         readonly=True,
     )
 
+    force_invoiced = fields.Boolean(
+        string="Forzar facturado",
+        default=False,
+    )
+
+    force_paid = fields.Boolean(
+        string="Forzar pagado",
+        default=False,
+    )
+
     invoice_status_badge = fields.Selection(
         selection=[("not_invoiced", "No facturado"), ("invoiced", "Facturado")],
         string="Facturación",
@@ -183,9 +206,16 @@ class ContadorLine(models.Model):
         readonly=True,
     )
 
-    @api.depends("invoice_line_ids.move_id.payment_state")
+    @api.depends("invoice_line_ids.move_id.payment_state", "force_invoiced", "force_paid")
     def _compute_invoice_info(self):
         for rec in self:
+            if rec.force_invoiced:
+                rec.invoice_line_count = len(rec.invoice_line_ids)
+                rec.invoice_move_id = False
+                rec.invoice_status_badge = "invoiced"
+                rec.payment_status_badge = "paid" if rec.force_paid else "unpaid"
+                continue
+
             lines = rec.invoice_line_ids
             rec.invoice_line_count = len(lines)
 
@@ -198,7 +228,7 @@ class ContadorLine(models.Model):
             else:
                 rec.invoice_move_id = False
                 rec.invoice_status_badge = "not_invoiced"
-                rec.payment_status_badge = "unpaid"
+                rec.payment_status_badge = "unpaid" if not rec.force_paid else "paid"
 
     def action_view_invoice(self):
         self.ensure_one()
@@ -222,6 +252,15 @@ class ContadorLine(models.Model):
             "domain": [("contador_line_id", "=", self.id)],
             "context": {"search_default_group_by_move_id": 1},
         }
+
+    def action_imprimir_recibo(self):
+        self.ensure_one()
+        if self.es_inicial:
+            raise ValidationError("No se puede imprimir el recibo de un registro inicial.")
+        return self.env.ref("iit_asovec.action_report_recibo_residencia_mensual").report_action(self)
+
+    def action_save(self):
+        return True
 
     # -------------------------
     # Período
@@ -451,9 +490,20 @@ class ContadorLine(models.Model):
             contador = self.env['asovec.contador'].browse(contador_id)
             vals.update(self._calcular_campos_linea(contador, lectura_actual, lectura_anterior, es_inicial=es_inicial))
 
-        return super().create(vals_list)
+        records = super().create(vals_list)
+
+        for rec in records:
+            rec._generar_cargo_mensual()
+
+        return records
 
     def write(self, vals):
+        periodo_puede_cambiar = any(k in vals for k in ('mes', 'anio'))
+        periodos_anteriores = {}
+        if periodo_puede_cambiar:
+            for rec in self:
+                periodos_anteriores[rec.id] = (rec.mes, rec.anio, rec.es_inicial)
+
         res = super().write(vals)
 
         if not any(k in vals for k in ('lectura', 'contador_id', 'es_inicial', 'mes', 'anio')):
@@ -466,7 +516,11 @@ class ContadorLine(models.Model):
                 'mes': vals.get('mes', rec.mes),
                 'anio': vals.get('anio', rec.anio),
             }
-            rec._validate_periodo_vals(final_vals, exclude_id=rec.id)
+            # Solo hay que re-validar el período (secuencia/duplicados) si realmente está
+            # cambiando de período; si solo se corrigió el valor de `lectura`, el período
+            # (y por tanto la validación de secuencia) sigue siendo el mismo.
+            if any(k in vals for k in ('contador_id', 'es_inicial', 'mes', 'anio')):
+                rec._validate_periodo_vals(final_vals, exclude_id=rec.id)
 
             is_ini = bool(final_vals.get('es_inicial'))
             lectura_anterior = 0.0 if is_ini else (rec.lectura_anterior or 0.0)
@@ -483,6 +537,13 @@ class ContadorLine(models.Model):
                 es_inicial=is_ini
             )
 
+            # Si el período (mes/año) cambió, hay que limpiar el cargo que había quedado
+            # asociado al período anterior antes de generar el del período nuevo.
+            if rec.id in periodos_anteriores:
+                old_mes, old_anio, old_es_inicial = periodos_anteriores[rec.id]
+                if not old_es_inicial and (old_mes != rec.mes or old_anio != rec.anio):
+                    rec._eliminar_cargo_periodo(rec.residencia_id, old_mes, old_anio)
+
             super(ContadorLine, rec).write({
                 'lectura_anterior': calc['lectura_anterior'],
                 'consumo': calc['consumo'],
@@ -492,4 +553,51 @@ class ContadorLine(models.Model):
                 'pago_total': calc['pago_total'],
             })
 
+            rec._generar_cargo_mensual()
+
         return res
+
+    def unlink(self):
+        for rec in self:
+            if not rec.es_inicial:
+                rec._eliminar_cargo_periodo(rec.residencia_id, rec.mes, rec.anio)
+        return super().unlink()
+
+    # -------------------------
+    # Generación de cargos (cobro mensual)
+    # -------------------------
+    def _cobro_line_for_period(self, residencia, mes, anio):
+        mes_padded = str(mes or "").zfill(2)
+        return self.env["asovec.proyecto_cobro_mensual_line"].search([
+            ("residencia_id", "=", residencia.id),
+            ("cobro_id.month", "=", mes_padded),
+            ("cobro_id.year", "=", anio),
+            ("cobro_id.state", "!=", "cancel"),
+        ], limit=1)
+
+    def _eliminar_cargo_periodo(self, residencia, mes, anio):
+        """Borra el cargo (y su línea de cobro mensual) de esa residencia/período si está en
+        borrador o cancelado. Si ya está posteado, no permite continuar."""
+        line = self._cobro_line_for_period(residencia, mes, anio)
+        if not line:
+            return
+        move = line.move_id
+        if move and move.state == "posted":
+            raise ValidationError(
+                f"No se puede modificar/eliminar esta lectura: ya existe un cargo posteado "
+                f"({move.name}) para {residencia.name} en {str(mes).zfill(2)}/{anio}."
+            )
+        line.unlink()
+        if move:
+            move.unlink()
+
+    def _generar_cargo_mensual(self):
+        """Crea (o recrea, si estaba en borrador) el cargo correspondiente a esta lectura."""
+        self.ensure_one()
+        if self.es_inicial:
+            return
+        proyecto = self.residencia_id.proyecto_aso_id
+        if not proyecto:
+            return
+        cobro = self.env["asovec.proyecto_cobro_mensual"]._get_or_create_cobro(proyecto, self.mes, self.anio)
+        cobro._generar_cargo_residencia(self.residencia_id, lectura=self)

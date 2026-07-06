@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
-import logging
 
-_logger = logging.getLogger(__name__)
 
 class ProyectoCobroMensual(models.Model):
     _name = "asovec.proyecto_cobro_mensual"
@@ -47,6 +45,13 @@ class ProyectoCobroMensual(models.Model):
         default="draft",
         required=True,
         tracking=True,
+    )
+
+    fecha_confirmacion = fields.Date(
+        string="Fecha de Confirmación",
+        readonly=True,
+        tracking=True,
+        help="Fecha en la que se confirmó (posteó) este cobro mensual.",
     )
 
     line_ids = fields.One2many(
@@ -130,174 +135,266 @@ class ProyectoCobroMensual(models.Model):
             rec.total_balance = (rec.total_to_charge or 0.0) - (rec.total_paid or 0.0)
 
     # --------------------
+    # Helpers de generación de cargos (compartidos con la creación de lecturas)
+    # --------------------
+    @api.model
+    def _get_or_create_cobro(self, proyecto, mes, anio):
+        """Busca el cobro mensual (no cancelado) de ese proyecto/mes/año; si no existe, lo crea
+        en borrador. `mes` puede venir como '1'..'12' (formato de asovec.contador.lines)."""
+        mes_padded = str(mes or "").zfill(2)
+        cobro = self.search([
+            ("proyecto_aso_id", "=", proyecto.id),
+            ("month", "=", mes_padded),
+            ("year", "=", anio),
+            ("state", "!=", "cancel"),
+        ], limit=1)
+        if not cobro:
+            cobro = self.create({
+                "proyecto_aso_id": proyecto.id,
+                "month": mes_padded,
+                "year": anio,
+            })
+        return cobro
+
+    def _get_journal_cargo(self):
+        self.ensure_one()
+        journal = self.env["account.journal"].search(
+            [("aso_cargo", "=", "Si"), ("company_id", "=", self.company_id.id)],
+            limit=1,
+        )
+        if not journal:
+            raise UserError(_("No existe un Diario contable con 'aso_cargo = Si'."))
+        return journal
+
+    def _get_servicios_automaticos(self):
+        servicios = self.env["product.template"].search(
+            [("aso_es_servicio_aso", "=", True), ("aso_automatico", "=", True)]
+        )
+        if not servicios:
+            raise UserError(_("No existen productos marcados como 'Servicio de Asociación'."))
+        return servicios
+
+    def _get_productos_especiales(self):
+        """Busca una sola vez los productos de agua base/exceso/inactivo, para no repetir
+        la misma búsqueda por cada residencia (antes se buscaban de nuevo en cada llamada)."""
+        ProductTemplate = self.env["product.template"]
+
+        base = ProductTemplate.search([("aso_agua_base", "=", True)], limit=1)
+        if not base or not base.product_variant_id:
+            raise UserError(_("No existe un producto marcado como 'Servicio Agua Base'."))
+
+        exceso = ProductTemplate.search([("aso_agua_exceso", "=", True)], limit=1)
+        if not exceso or not exceso.product_variant_id:
+            raise UserError(_("No existe un producto marcado como 'Servicio Agua Exceso'."))
+
+        inactivo = ProductTemplate.search([("aso_agua_inactivo", "=", True)], limit=1)
+        if not inactivo or not inactivo.product_variant_id:
+            raise UserError(_("No existe un producto marcado como 'Servicio Agua Inactivo'."))
+
+        return {"base": base, "exceso": exceso, "inactivo": inactivo}
+
+    def _build_invoice_lines_residencia(self, residencia, servicios, lectura, productos_especiales=None):
+        """Devuelve (invoice_lines, con_lectura) para una residencia, igual a la lógica
+        original de action_generate."""
+        ResidenciaLines = self.env["asovec.residencia.lines"]
+        productos_especiales = productos_especiales or self._get_productos_especiales()
+
+        invoice_lines = []
+        for t in servicios:
+            product = t.product_variant_id
+            if not product:
+                continue
+
+            servicio_especial = ResidenciaLines.search([
+                ("residencia_id", "=", residencia.id), ("producto_id", "=", t.id)
+            ])
+            precio = servicio_especial.precio if servicio_especial else t.list_price
+
+            if precio > 0:
+                invoice_lines.append((0, 0, {
+                    "product_id": product.id,
+                    "name": t.name,
+                    "quantity": 1.0,
+                    "price_unit": precio,
+                    "tax_ids": [(6, 0, [])],   # sin impuestos
+                }))
+
+        if not residencia.activo:
+            # Cuota para contadores inactivos
+            con_lectura = "Inactivo"
+            servicio = productos_especiales["inactivo"]
+            invoice_lines.append((0, 0, {
+                "product_id": servicio.product_variant_id.id,
+                "name": servicio.name,
+                "quantity": 1.0,
+                "price_unit": residencia.proyecto_aso_id.cobro_inactivas,
+                "tax_ids": [(6, 0, [])],   # sin impuestos
+            }))
+        else:
+            con_lectura = "Lectura Valida" if lectura else "Sin Lectura"
+
+            # Cuota base para contadores
+            cobro_base = lectura.base if lectura else residencia.proyecto_aso_id.cobro_base
+            servicio = productos_especiales["base"]
+            vals_line = {
+                "product_id": servicio.product_variant_id.id,
+                "name": servicio.name,
+                "quantity": 1.0,
+                "price_unit": cobro_base,
+                "tax_ids": [(6, 0, [])],   # sin impuestos
+            }
+            if lectura:
+                vals_line["contador_line_id"] = lectura.id
+            invoice_lines.append((0, 0, vals_line))
+
+            # Pago extra para contadores
+            cobro_exceso = lectura.pago_extra if lectura else 0
+            if cobro_exceso > 0:
+                servicio = productos_especiales["exceso"]
+                invoice_lines.append((0, 0, {
+                    "product_id": servicio.product_variant_id.id,
+                    "name": servicio.name,
+                    "quantity": 1.0,
+                    "price_unit": cobro_exceso,
+                    "tax_ids": [(6, 0, [])],   # sin impuestos
+                }))
+
+        if not invoice_lines:
+            raise UserError(_("No se pudieron generar líneas de cargo para la residencia '%s'.") % residencia.display_name)
+
+        return invoice_lines, con_lectura
+
+    def _generar_cargo_residencia(self, residencia, lectura=None, journal=None, servicios=None, productos_especiales=None):
+        """Crea (o recrea) el cargo en borrador de una residencia dentro de este cobro mensual.
+
+        Si ya existe un cargo posteado para esa residencia, lanza error (no se puede regenerar).
+        Si existe uno en borrador, se borra y se vuelve a crear con los valores actuales.
+        """
+        self.ensure_one()
+
+        if not residencia.cliente_id:
+            raise UserError(_(
+                "La residencia '%s' no tiene un cliente (partner_id) asignado."
+            ) % residencia.display_name)
+
+        journal = journal or self._get_journal_cargo()
+        servicios = servicios or self._get_servicios_automaticos()
+        productos_especiales = productos_especiales or self._get_productos_especiales()
+
+        existing_line = self.line_ids.filtered(lambda l: l.residencia_id == residencia)
+        if existing_line:
+            move = existing_line.move_id
+            if move and move.state == "posted":
+                raise UserError(_(
+                    "Ya existe un cargo posteado (%s) para la residencia '%s' en %s/%s. "
+                    "No se puede regenerar."
+                ) % (move.name, residencia.display_name, self.month, self.year))
+            # En borrador o cancelado: se puede borrar y recrear sin problema.
+            existing_line.unlink()
+            if move:
+                move.unlink()
+
+        invoice_lines, con_lectura = self._build_invoice_lines_residencia(
+            residencia, servicios, lectura, productos_especiales=productos_especiales
+        )
+
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "company_id": self.company_id.id,
+            "journal_id": journal.id,
+            "partner_id": residencia.cliente_id.id,
+            "invoice_date": fields.Date.context_today(self),
+            "invoice_origin": self.name or "",
+            "ref": f"{self.name or ''} - {residencia.display_name}",
+            "invoice_line_ids": invoice_lines,
+        })
+
+        self.env["asovec.proyecto_cobro_mensual_line"].create({
+            "cobro_id": self.id,
+            "residencia_id": residencia.id,
+            "move_id": move.id,
+            "con_lectura": con_lectura,
+            "amount_total": move.amount_total,
+            "contador_line_id": lectura.id if lectura else False,
+        })
+
+        return move
+
+    # --------------------
     # Acciones
     # --------------------
+    # Igual que al confirmar: generar en lotes evita exceder el tiempo límite de una
+    # sola petición web en proyectos con muchas residencias, y si se interrumpe a la
+    # mitad, lo ya generado queda guardado (se puede volver a presionar para continuar).
+    _GENERATE_CHUNK_SIZE = 50
+
     def action_generate(self):
-        """Genera cargos (account.move) en draft por cada residencia del proyecto."""
-        AccountMove = self.env["account.move"]
-        Journal = self.env["account.journal"]
-        Residencia = self.env["asovec.residencia"]
-        ProductTemplate = self.env["product.template"]
-        ResidenciaLines = self.env["asovec.residencia.lines"]
+        """Genera el cargo de cada residencia del proyecto que todavía no lo tenga, y regenera
+        (borra y vuelve a crear) los que sigan en borrador o cancelados, por si hubo cambios
+        (precios, lecturas corregidas, etc). Si alguna residencia ya tiene un cargo posteado,
+        se detiene con error: eso ya no se puede regenerar desde aquí."""
         ContadorLine = self.env["asovec.contador.lines"]
+        Residencia = self.env["asovec.residencia"]
 
         for rec in self:
-            try:
-                if rec.state != "draft":
-                    raise UserError(_("Solo puedes generar en estado Borrador."))
+            if rec.state != "draft":
+                raise UserError(_("Solo puedes generar en estado Borrador."))
 
-                if not rec.proyecto_aso_id:
-                    raise UserError(_("Debes seleccionar un Proyecto."))
+            if not rec.proyecto_aso_id:
+                raise UserError(_("Debes seleccionar un Proyecto."))
 
-                # 1️⃣ Buscar journal de cargos ASO
-                journal = Journal.search(
-                    [("aso_cargo", "=", "Si"), ("company_id", "=", rec.company_id.id)],
-                    limit=1,
-                )
-                if not journal:
-                    raise UserError(_("No existe un Diario contable con 'aso_cargo = Si'."))
+            residencias = Residencia.search([("proyecto_aso_id", "=", rec.proyecto_aso_id.id)], order="id")
+            if not residencias:
+                raise UserError(_("No hay residencias asociadas a este proyecto."))
 
-                # 2️⃣ Buscar residencias del proyecto
-                residencias = Residencia.search([("proyecto_aso_id", "=", rec.proyecto_aso_id.id)])
-                if not residencias:
-                    raise UserError(_("No hay residencias asociadas a este proyecto."))
+            # Se buscan una sola vez (antes se repetían por cada residencia).
+            journal = rec._get_journal_cargo()
+            servicios = rec._get_servicios_automaticos()
+            productos_especiales = rec._get_productos_especiales()
+            mes_plano = str(int(rec.month))
 
-                # 3️⃣ Buscar servicios ASO (product.template)
-                servicios = ProductTemplate.search([("aso_es_servicio_aso", "=", True), ("aso_automatico", "=", True)])
-                if not servicios:
-                    raise UserError(_("No existen productos marcados como 'Servicio de Asociación'."))
+            lecturas = ContadorLine.search([
+                ("residencia_id", "in", residencias.ids),
+                ("anio", "=", rec.year),
+                ("mes", "=", mes_plano),
+                ("es_inicial", "=", False),
+            ])
+            lectura_por_residencia = {l.residencia_id.id: l for l in lecturas}
 
-                moves = rec.line_ids.mapped("move_id").filtered(lambda m: m)
-                not_draft = moves.filtered(lambda m: m.state != "draft")
-                if not_draft:
+            total = len(residencias)
+            for i in range(0, total, self._GENERATE_CHUNK_SIZE):
+                lote = residencias[i:i + self._GENERATE_CHUNK_SIZE]
+                try:
+                    for r in lote:
+                        rec._generar_cargo_residencia(
+                            r,
+                            lectura=lectura_por_residencia.get(r.id),
+                            journal=journal,
+                            servicios=servicios,
+                            productos_especiales=productos_especiales,
+                        )
+                except Exception as e:
                     raise UserError(_(
-                        "No puedes volver a generar porque hay cargos que ya no están en borrador:\n%s"
-                    ) % "\n".join(not_draft.mapped("name")))
-
-                moves.unlink()
-                
-                # 4️⃣ Limpiar detalle previo
-                rec.line_ids.unlink()
-
-                lines_vals = []
-
-                for r in residencias:
-                    if not r.cliente_id:
-                        raise UserError(_(
-                            "La residencia '%s' no tiene un cliente (partner_id) asignado."
-                        ) % r.display_name)
-
-                    # 5️⃣ Construir líneas de factura (una por cada servicio ASO)
-                    invoice_lines = []
-                    for t in servicios:
-                        product = t.product_variant_id
-                        if not product:
-                            continue
-
-                        servicio_especial = ResidenciaLines.search([("residencia_id", "=", r.id), ("producto_id", "=", t.id)])
-
-                        if not servicio_especial:
-                            precio = t.list_price
-                        else:
-                            precio = servicio_especial.precio
-                        
-                        if precio > 0:
-                            invoice_lines.append((0, 0, {
-                                "product_id": product.id,
-                                "name": t.name,
-                                "quantity": 1.0,
-                                "price_unit": precio,
-                                "tax_ids": [(6, 0, [])],   # sin impuestos
-                            }))
-
-                    lectura_estado = "Error"
-                    lectura = ContadorLine.search([("residencia_id", "=", r.id), ("anio","=", rec.year), ("mes","=", str(int(rec.month)))])
-                    if lectura:
-                        lectura_estado = "Lectura Valida"
-                    else: 
-                        lectura_estado = "Sin Lectura"
-
-                    if not r.activo:  
-                        # Cuota para contadores inactivos
-                        lectura_estado = "Inactivo"
-                        servicio = ProductTemplate.search([("aso_agua_inactivo", "=", True)])
-                        servicio_inactivo = servicio.product_variant_id
-                        invoice_lines.append((0, 0, {
-                            "product_id": servicio_inactivo.id,
-                            "name": servicio.name,
-                            "quantity": 1.0,
-                            "price_unit": r.proyecto_aso_id.cobro_inactivas,
-                            "tax_ids": [(6, 0, [])],   # sin impuestos
-                        }))
-                    else:
-                        # Cuota base para contadores
-                        if lectura:
-                            cobro_base = lectura.base
-                        else:
-                            cobro_base = rec.proyecto_aso_id.cobro_base
-                        servicio = ProductTemplate.search([("aso_agua_base", "=", True)])
-                        servicio_base = servicio.product_variant_id
-                        vals_line = {
-                            "product_id": servicio_base.id,
-                            "name": servicio.name,
-                            "quantity": 1.0,
-                            "price_unit": cobro_base,
-                            "tax_ids": [(6, 0, [])],   # sin impuestos
-                        }
-                        if lectura:
-                            vals_line["contador_line_id"] = lectura.id
-
-                        invoice_lines.append((0, 0, vals_line))
-
-                        # pago extra para contadores
-                        if lectura:
-                            cobro_exceso = lectura.pago_extra
-                        else:
-                            cobro_exceso = 0
-                        
-                        if cobro_exceso > 0:
-                            servicio = ProductTemplate.search([("aso_agua_exceso", "=", True)])
-                            servicio_exceso = servicio.product_variant_id
-                            invoice_lines.append((0, 0, {
-                                "product_id": servicio_exceso.id,
-                                "name": servicio.name,
-                                "quantity": 1.0,
-                                "price_unit": cobro_exceso,
-                                "tax_ids": [(6, 0, [])],   # sin impuestos
-                            }))
-                    
-                    if not invoice_lines:
-                        raise UserError(_("No se pudieron generar líneas de cargo."))
-
-                    # 6️⃣ Crear el account.move (cargo) en draft
-                    move = AccountMove.create({
-                        "move_type": "out_invoice",
-                        "company_id": rec.company_id.id,
-                        "journal_id": journal.id,
-                        "partner_id": r.cliente_id.id,
-                        "invoice_date": fields.Date.context_today(rec),
-                        "invoice_origin": rec.name or "",
-                        "ref": f"{rec.name or ''} - {r.display_name}",
-                        "invoice_line_ids": invoice_lines,
-                    })
-
-                    # 7️⃣ Registrar en el detalle del cobro mensual
-                    lines_vals.append((0, 0, {
-                        "residencia_id": r.id,
-                        "move_id": move.id,
-                        "con_lectura": lectura_estado,
-                        "amount_total": move.amount_total,  # ok aunque sea related, no estorba
-                    }))
-
-                rec.write({"line_ids": lines_vals})
-            except Exception as e:
-                _logger.exception("Error inesperado en el proceso")
-                raise UserError(f"Ocurrió un error inesperado: {str(e)}")
+                        "Se generaron %s de %s residencias antes de encontrar un error. "
+                        "Lo ya generado queda guardado: corrige el problema y vuelve a "
+                        "presionar el botón para continuar con el resto.\n\nDetalle: %s"
+                    ) % (i, total, str(e)))
+                self.env.cr.commit()
 
         return True
 
+    # Postear en lotes evita exceder el tiempo límite de una sola petición web
+    # (el posteo de facturas de Odoo asigna el número de secuencia registro por
+    # registro; con cientos de residencias esto puede tardar varios minutos).
+    _CONFIRM_CHUNK_SIZE = 50
+
     def action_confirm(self):
-        """Publica el cobro mensual y postea todos los cargos relacionados (todo o nada)."""
+        """Publica el cobro mensual y postea los cargos relacionados, en lotes.
+
+        Si se interrumpe (o falla) a la mitad, los lotes ya posteados quedan
+        confirmados: el cobro sigue en Borrador y se puede volver a presionar
+        Confirmar para continuar solo con los cargos que faltan.
+        """
         for rec in self:
             if rec.state != "draft":
                 raise UserError(_("Solo puedes confirmar desde Borrador."))
@@ -306,38 +403,30 @@ class ProyectoCobroMensual(models.Model):
             if not moves:
                 raise UserError(_("No hay cargos relacionados para confirmar."))
 
-            not_draft = moves.filtered(lambda m: m.state != "draft")
-            if not_draft:
+            cancelled = moves.filtered(lambda m: m.state == "cancel")
+            if cancelled:
                 raise UserError(_(
-                    "Hay cargos que no están en borrador y no se pueden confirmar desde aquí:\n%s"
-                ) % "\n".join(not_draft.mapped("name")))
+                    "Hay cargos cancelados y no se pueden confirmar desde aquí:\n%s"
+                ) % "\n".join(cancelled.mapped("name")))
 
-            try:
-                moves.action_post()
-            except Exception as e:
-                raise UserError(_(
-                    "No se pudieron confirmar todos los cargos. Se canceló la operación completa.\n\nDetalle: %s"
-                ) % str(e))
+            pendientes = moves.filtered(lambda m: m.state == "draft")
+
+            total = len(pendientes)
+            for i in range(0, total, self._CONFIRM_CHUNK_SIZE):
+                lote = pendientes[i:i + self._CONFIRM_CHUNK_SIZE]
+                try:
+                    lote.action_post()
+                except Exception as e:
+                    raise UserError(_(
+                        "Se confirmaron %s de %s cargos pendientes antes de encontrar un "
+                        "error. Los ya confirmados quedan posteados: corrige el problema y "
+                        "vuelve a presionar Confirmar para continuar con el resto.\n\n"
+                        "Detalle: %s"
+                    ) % (i, total, str(e)))
+                self.env.cr.commit()
 
             rec.state = "posted"
-
-        return True
-
-    def action_cancel(self):
-        """Cancela el cobro mensual y todos los cargos relacionados (solo desde borrador)."""
-        for rec in self:
-            if rec.state != "draft":
-                raise UserError(_("Solo puedes cancelar si está en Borrador."))
-
-            moves = rec.line_ids.mapped("move_id").filtered(lambda m: m)
-            not_draft = moves.filtered(lambda m: m.state != "draft")
-            if not_draft:
-                raise UserError(_(
-                    "No puedes cancelar porque hay cargos que ya no están en borrador:\n%s"
-                ) % "\n".join(not_draft.mapped("name")))
-
-            moves.unlink()
-            rec.state = "cancel"
+            rec.fecha_confirmacion = fields.Date.context_today(rec)
 
         return True
 
@@ -357,6 +446,7 @@ class ProyectoCobroMensual(models.Model):
                 raise UserError(_("No se pudieron revertir los cargos a borrador.\n\nDetalle: %s") % str(e))
 
             rec.state = "draft"
+            rec.fecha_confirmacion = False
 
         return True
 
@@ -433,6 +523,40 @@ class ProyectoCobroMensualLine(models.Model):
 
     con_lectura = fields.Char(string='Lectura de Contador', default="Sin Lectura")
 
+    contador_line_id = fields.Many2one(
+        comodel_name="asovec.contador.lines",
+        string="Lectura",
+        readonly=True,
+        help="Lectura de contador usada para calcular este cargo (vacío si no hubo lectura ese mes).",
+    )
+    lectura_anterior = fields.Float(related="contador_line_id.lectura_anterior", string="Lectura anterior", readonly=True)
+    lectura_actual = fields.Float(related="contador_line_id.lectura", string="Lectura actual", readonly=True)
+    exceso = fields.Float(
+        string="Exceso (m³)",
+        related="contador_line_id.metros_extras",
+        readonly=True,
+        help="Metros cúbicos consumidos por encima del derecho base.",
+    )
+    base = fields.Monetary(
+        string="Base",
+        related="contador_line_id.base",
+        currency_field="currency_id",
+        readonly=True,
+    )
+    pago_extra = fields.Monetary(
+        string="Pago Extra",
+        related="contador_line_id.pago_extra",
+        currency_field="currency_id",
+        readonly=True,
+        help="Monto cobrado por el consumo en exceso.",
+    )
+    pago_total = fields.Monetary(
+        string="Pago Total",
+        related="contador_line_id.pago_total",
+        currency_field="currency_id",
+        readonly=True,
+    )
+
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
@@ -440,6 +564,14 @@ class ProyectoCobroMensualLine(models.Model):
             if rec.residencia_id and rec.residencia_id.cliente_id:
                 rec.cliente_id = rec.residencia_id.cliente_id.id
         return records
+
+    def action_imprimir_recibo(self):
+        self.ensure_one()
+        if not self.contador_line_id:
+            raise UserError(_(
+                "Esta residencia no tiene una lectura asociada a este cargo; no se puede imprimir el recibo."
+            ))
+        return self.contador_line_id.action_imprimir_recibo()
 
     @api.depends("amount_total", "amount_residual")
     def _compute_line_balance(self):

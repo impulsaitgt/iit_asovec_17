@@ -8,3 +8,9 @@ from . import cobro_consulta_wizard
 from . import tipo_servicio_aso
 from . import account_move_line
 from . import residencia_report
+from . import residencia_recibo_wizard
+from . import residencia_recibo_report
+from . import proceso_recibo_masivo_wizard
+from . import residencia_recibo_masivo_report
+from . import proceso_estado_cuenta_csv_wizard
+from . import proceso_estado_lecturas_excel_wizard

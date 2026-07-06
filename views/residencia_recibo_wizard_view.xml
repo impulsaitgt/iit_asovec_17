@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_asovec_residencia_recibo_wizard_form" model="ir.ui.view">
+      <field name="name">asovec.residencia_recibo_wizard.form</field>
+      <field name="model">asovec.residencia_recibo_wizard</field>
+      <field name="arch" type="xml">
+        <form string="Imprimir Recibo Mensual">
+          <sheet>
+            <group>
+              <field name="residencia_id" readonly="1"/>
+              <field name="mes"/>
+              <field name="anio"/>
+            </group>
+
+            <footer>
+              <button name="action_imprimir" type="object" string="Imprimir" class="btn-primary"/>
+              <button string="Cancelar" special="cancel" class="btn-secondary"/>
+            </footer>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+  </data>
+</odoo>

@@ -7,6 +7,13 @@
         <field name="model">asovec.proyecto_aso</field>
         <field name="arch" type="xml">
             <form string="Proyecto">
+                <header>
+                    <button name="action_abrir_recibo_masivo_wizard"
+                        type="object"
+                        string="Generar Recibos Mensuales"
+                        class="btn-primary"
+                        icon="fa-file-pdf-o" />
+                </header>
                 <sheet>
                     <field name="residencia_count" invisible="1" />
 
@@ -32,7 +39,11 @@
                             <field name="metro_base"
                                 placeholder="Metros de agua a los que se tienen derecho" />
                             <field name="cobro_inactivas" placeholder="Cobro fijo por inactividad" />
+                            <field name="dia_tentativo_carga" />
                         </group>
+                    </group>
+                    <group>
+                        <field name="leyenda_recibo" widget="html" />
                     </group>
                 </sheet>
             </form>

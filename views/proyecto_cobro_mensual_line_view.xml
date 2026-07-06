@@ -31,6 +31,11 @@
             decoration-info="move_state == 'draft'"
             decoration-success="move_state == 'posted'"
             decoration-danger="move_state == 'cancel'" />
+
+          <field name="con_lectura" string="Lectura" widget="badge"
+            decoration-info="con_lectura == 'Inactivo'"
+            decoration-success="con_lectura == 'Lectura Valida'"
+            decoration-danger="con_lectura == 'Sin Lectura'" />
         </tree>
       </field>
     </record>
@@ -41,11 +46,23 @@
       <field name="arch" type="xml">
         <search string="Estado de Cuenta">
 
-          <!-- Filtros -->
+          <!-- Búsqueda rápida por residencia (primero, para encontrarla fácilmente) -->
+          <field name="residencia_id" string="Residencia" />
           <field name="proyecto_aso_id" />
-          <field name="residencia_id" />
           <field name="move_state" />
           <field name="cobro_state" />
+          <field name="con_lectura" />
+
+          <separator />
+
+          <!-- Filtros por estado de lectura -->
+          <filter string="Sin Lectura" name="filter_sin_lectura"
+            domain="[('con_lectura', '=', 'Sin Lectura')]" />
+          <filter string="Inactivo" name="filter_inactivo"
+            domain="[('con_lectura', '=', 'Inactivo')]" />
+          <filter string="Con Lectura Válida" name="filter_lectura_valida"
+            domain="[('con_lectura', '=', 'Lectura Valida')]" />
+
           <!-- Filtros rápidos por período -->
           <filter string="Este año"
             name="current_year"
@@ -84,6 +101,9 @@
 
             <filter string="Mes" name="grp_month"
               context="{'group_by':'month'}" />
+
+            <filter string="Lectura" name="grp_con_lectura"
+              context="{'group_by':'con_lectura'}" />
           </group>
 
         </search>

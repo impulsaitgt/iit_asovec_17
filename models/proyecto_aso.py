@@ -13,6 +13,19 @@ class ProyectoAso(models.Model):
     metro_base = fields.Integer(string="Metros base (derecho)", default=0, required=True)
     cobro_inactivas = fields.Monetary(string="Cobro por Inactivas", currency_field="currency_id", required=True, default=0.00)
     residencia_count = fields.Integer(string="Residencias", compute="_compute_residencia_count")
+    leyenda_recibo = fields.Html(
+        string="Leyenda del Recibo",
+        sanitize=True,
+        default="<p>Cualquier consulta relacionada</p>",
+        help="Texto que se muestra en el recibo mensual de las residencias, en lugar de 'Cualquier consulta relacionada'.",
+    )
+    dia_tentativo_carga = fields.Integer(
+        string="Día tentativo de carga de datos",
+        default=6,
+        required=True,
+        help="Día del mes usado para calcular la fecha a partir de la cual se puede pagar, "
+             "cuando el cobro mensual todavía no ha sido confirmado.",
+    )
 
     _sql_constraints = [
         ('referencia_unica', 'unique(name)', "Este proyecto ya existe, por favor especifica otro Nombre")
@@ -36,6 +49,16 @@ class ProyectoAso(models.Model):
                 #'search_default_group_proyecto': 1,  # opcional si ya tenés group by
             },
         }
-    
+
+    def action_abrir_recibo_masivo_wizard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Generar Recibos Mensuales',
+            'res_model': 'asovec.proceso_recibo_masivo_wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_proyecto_aso_id': self.id},
+        }
 
 

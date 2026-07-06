@@ -22,8 +22,14 @@
         'views/account_journal.xml',
         'views/proyecto_cobro_mensual_line_view.xml',
         'views/cobro_consulta_wizard_view.xml',
+        'views/residencia_recibo_wizard_view.xml',
+        'views/proceso_recibo_masivo_wizard_view.xml',
+        'views/proceso_estado_cuenta_csv_wizard_view.xml',
+        'views/proceso_estado_lecturas_excel_wizard_view.xml',
         'views/menu_view.xml',
         'reports/estado_cuenta_report.xml',
-        'reports/estado_cuenta_residencia_lecturas_report.xml'
+        'reports/estado_cuenta_residencia_lecturas_report.xml',
+        'reports/recibo_residencia_mensual_report.xml',
+        'reports/recibo_residencia_mensual_masivo_report.xml'
     ]
 }

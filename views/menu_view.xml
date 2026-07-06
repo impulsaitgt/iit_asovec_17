@@ -66,6 +66,27 @@
         <field name="context">{}</field>
     </record>
 
+    <record id="proceso_recibo_masivo_wizard_action" model="ir.actions.act_window">
+        <field name="name">Generar Recibos Mensuales</field>
+        <field name="res_model">asovec.proceso_recibo_masivo_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="proceso_estado_cuenta_csv_wizard_action" model="ir.actions.act_window">
+        <field name="name">Generar CSV de Estado de Cuenta (Banco)</field>
+        <field name="res_model">asovec.proceso_estado_cuenta_csv_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="proceso_estado_lecturas_excel_wizard_action" model="ir.actions.act_window">
+        <field name="name">Generar Excel de Estado de Lecturas</field>
+        <field name="res_model">asovec.proceso_estado_lecturas_excel_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
 
     <menuitem name="Asociacion de Vecinos" id="asovec_menu" />
     <menuitem name="Asociacion" id="asociacion_menu" parent="asovec_menu" sequence="10" />
@@ -96,6 +117,10 @@
     <menuitem name="Procesos" id="procesos_menu" parent="asovec_menu" sequence="50" />
     <menuitem name="Generacion de Cobros Mensuales" id="proyecto_cobro_mensual"
         parent="procesos_menu" action="proyecto_cobro_mensual_action" />
+    <menuitem name="Generar Recibos Mensuales" id="proceso_recibo_masivo_opcion"
+        parent="procesos_menu" action="proceso_recibo_masivo_wizard_action" />
+    <menuitem name="Generar CSV de Estado de Cuenta (Banco)" id="proceso_estado_cuenta_csv_opcion"
+        parent="procesos_menu" action="proceso_estado_cuenta_csv_wizard_action" />
 
     <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="60" />
     <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"
@@ -103,6 +128,8 @@
     <menuitem name="Análisis Cobros y Pagos" id="menu_asovec_estado_cuenta_analisis"
         parent="consultas_menu"
         action="action_asovec_estado_cuenta_analisis" />
+    <menuitem name="Generar Excel de Estado de Lecturas" id="proceso_estado_lecturas_excel_opcion"
+        parent="consultas_menu" action="proceso_estado_lecturas_excel_wizard_action" />
 
 
     <menuitem name="Procesos" id="proceso_menu" parent="asovec_menu" />
