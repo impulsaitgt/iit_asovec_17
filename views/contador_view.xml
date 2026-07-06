@@ -117,6 +117,13 @@
                                             class="btn-secondary"
                                             invisible="invoice_line_count == 0" />
 
+                                        <button name="action_imprimir_recibo"
+                                            type="object"
+                                            string="Imprimir Recibo"
+                                            class="btn-primary"
+                                            icon="fa-file-pdf-o"
+                                            invisible="es_inicial" />
+
                                         <field name="invoice_line_count" invisible="1" />
                                         <field name="invoice_move_id" invisible="1" />
                                     </header>
@@ -285,11 +292,18 @@
                         class="btn-secondary"
                         invisible="invoice_line_count == 0" />
 
+                    <button name="action_imprimir_recibo"
+                        type="object"
+                        string="Imprimir Recibo"
+                        class="btn-primary"
+                        icon="fa-file-pdf-o"
+                        invisible="es_inicial" />
+
                     <field name="invoice_line_count" invisible="1" />
                     <field name="invoice_move_id" invisible="1" />
-                    <button name="action_save" 
-                        string="💾 Guardar" 
-                        type="object" 
+                    <button name="action_save"
+                        string="💾 Guardar"
+                        type="object"
                         class="btn-primary"/>
 <!--                     <button string="Cancelar"
                         class="btn-secondary"

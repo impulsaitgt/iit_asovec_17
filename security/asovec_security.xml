@@ -7,7 +7,7 @@
     <record id="asovec_group_administrador" model="res.groups">
         <field name="name">Administrador Asociacion de Vecinos</field>
         <field name="category_id" ref="categoria_modulo_asovec"/>
-        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('base.group_allow_export'))]"/>
     </record>
     
 </odoo>

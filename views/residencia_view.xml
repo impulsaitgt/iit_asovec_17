@@ -19,6 +19,11 @@
                         string="Estado de Cuenta (Lecturas)"
                         class="btn-primary"
                         icon="fa-file-pdf-o" />
+                    <button name="action_abrir_recibo_wizard"
+                        type="object"
+                        string="Recibo Mensual"
+                        class="btn-primary"
+                        icon="fa-file-pdf-o" />
                 </header>
 
                 <sheet>
@@ -39,11 +44,24 @@
                         <field name="name" placeholder="Nombre/Codigo" />
                     </group>
                     <group>
-                        <field name="direccion" placeholder="Direccion" />
-                        <field name="cliente_id" />
-                        <field name="proyecto_aso_id" />
+                        <group>
+                            <field name="direccion" placeholder="Direccion" />
+                            <field name="sector" />
+                            <field name="calle" placeholder="Calle" />
+                            <field name="no_casa" placeholder="No. Casa" />
+                        </group>
+                        <group>
+                            <field name="cliente_id" />
+                            <field name="proyecto_aso_id" />
+                            <field name="activo" />
+                            <field name="metros_especiales" />
+                            <field name="metros_especiales_cantidad"
+                                invisible="not metros_especiales"
+                                required="metros_especiales" />
+                        </group>
+                    </group>
+                    <group>
                         <field name="detalle" widget="text" placeholder="Escribe aquí..." />
-                        <field name="activo" />
                     </group>
                     <notebook>
                         <page string="Servicios con comportamiento especial para esta Residencia"

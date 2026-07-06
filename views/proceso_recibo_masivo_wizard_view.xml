@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_asovec_proceso_recibo_masivo_wizard_form" model="ir.ui.view">
+      <field name="name">asovec.proceso_recibo_masivo_wizard.form</field>
+      <field name="model">asovec.proceso_recibo_masivo_wizard</field>
+      <field name="arch" type="xml">
+        <form string="Generar Recibos Mensuales (Proceso Masivo)">
+          <sheet>
+            <group>
+              <field name="proyecto_aso_id" />
+              <field name="mes" />
+              <field name="anio" />
+            </group>
+
+            <footer>
+              <button name="action_generar" type="object" string="Generar" class="btn-primary" />
+              <button string="Cancelar" special="cancel" class="btn-secondary" />
+            </footer>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+  </data>
+</odoo>

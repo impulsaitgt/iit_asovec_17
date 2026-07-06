@@ -8,6 +8,9 @@ class Residencia(models.Model):
 
     name = fields.Char(string="Nombre/Codigo", required=True)
     direccion = fields.Char(string="Direccion")
+    sector = fields.Integer(string="Sector")
+    calle = fields.Char(string="Calle")
+    no_casa = fields.Char(string="No. Casa")
     detalle = fields.Text(string="Informacion Detallada")
     proyecto_aso_id = fields.Many2one(string="Proyecto", comodel_name='asovec.proyecto_aso', required=True)
     cliente_id = fields.Many2one(comodel_name='res.partner', string="Contacto", required=False)
@@ -16,6 +19,13 @@ class Residencia(models.Model):
     contador_count = fields.Integer(string="Contadores", compute="_compute_contador_count")
     lectura_count = fields.Integer(string="Lecturas", compute="_compute_lectura_count")
     activo = fields.Boolean(string='Activo', default=True)
+    metros_especiales = fields.Boolean(string='Manejo especial de metros', default=False)
+    metros_especiales_cantidad = fields.Integer(string='Metros especiales', default=0)
+
+    @api.onchange('metros_especiales')
+    def _onchange_metros_especiales(self):
+        if not self.metros_especiales:
+            self.metros_especiales_cantidad = 0
 
     _sql_constraints = [
         ('referencia_unica', 'unique(name)', "Esta residencia ya existe, por favor especifica otro Nombre/Codigo")
@@ -143,6 +153,17 @@ class Residencia(models.Model):
     def action_print_estado_cuenta_lecturas(self):
         self.ensure_one()
         return self.env.ref("iit_asovec.action_report_estado_cuenta_residencia_lecturas").report_action(self)
+
+    def action_abrir_recibo_wizard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Imprimir Recibo Mensual',
+            'res_model': 'asovec.residencia_recibo_wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_residencia_id': self.id},
+        }
 
 
 class ResidenciaLines(models.Model):

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Acción del reporte -->
+  <record id="action_report_recibo_residencia_mensual" model="ir.actions.report">
+    <field name="name">Recibo Mensual (Residencia)</field>
+    <field name="model">asovec.contador.lines</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">iit_asovec.report_recibo_residencia_mensual</field>
+    <field name="report_file">iit_asovec.report_recibo_residencia_mensual</field>
+    <field name="print_report_name">'Recibo - %s' % (object.residencia_id.name)</field>
+  </record>
+
+  <!-- Card reutilizable: un recibo individual (diseño vertical). Se reutilizará en el proceso
+       masivo (4 franjas apiladas por hoja, una debajo de otra). -->
+  <template id="recibo_residencia_lectura_card">
+    <style>
+      .recibo_leyenda p { margin: 0 0 4px 0; }
+    </style>
+    <div style="border: 1px solid #333; border-radius: 6px; padding: 8px 10px; height: 100%; box-sizing: border-box; overflow: hidden;">
+      <table style="width:100%; margin-bottom:4px; border-collapse:collapse;">
+        <tr>
+          <td style="width:1%; white-space:nowrap; vertical-align:middle; padding:0;">
+            <img t-if="rec['logo']"
+              t-att-src="image_data_uri(rec['logo'])"
+              style="max-height: 36px; max-width: 80px;" alt="Logo" />
+          </td>
+          <td style="vertical-align:middle; padding:0 0 0 10px; text-align:left; font-size: 15px; font-weight: bold;">
+            <span t-esc="rec['proyecto'] and rec['proyecto'].name or ''" />
+          </td>
+          <td style="width:1%; white-space:nowrap; vertical-align:middle; text-align:right; padding:0;">
+            <span t-if="rec['move_state_label']"
+              t-attf-style="display:inline-block; font-size:7px; font-weight:bold; color:#fff; padding:2px 6px; border-radius:8px; margin-left:3px; background-color:#{rec['move_state_color']};"
+              t-esc="rec['move_state_label']" />
+            <span t-if="rec['payment_label']"
+              t-attf-style="display:inline-block; font-size:7px; font-weight:bold; color:#fff; padding:2px 6px; border-radius:8px; margin-left:3px; background-color:#{rec['payment_color']};"
+              t-esc="rec['payment_label']" />
+          </td>
+        </tr>
+      </table>
+
+      <div style="font-size: 10px; line-height:1.25; margin-bottom: 4px;">
+        <div><strong>Vecino:</strong> <span t-esc="rec['vecino']" /></div>
+        <div><strong>Cuenta:</strong> <span t-esc="rec['cuenta']" /></div>
+        <div><strong>Dirección:</strong> <span t-esc="rec['direccion']" /></div>
+        <div><strong>Período:</strong> <span t-esc="rec['periodo']" /></div>
+      </div>
+
+      <table class="table table-sm" style="width:100%; margin-bottom:4px; font-size: 8.5px; table-layout: fixed;">
+        <thead>
+          <tr style="background-color:#009999; color:#ffffff;">
+            <th style="width:16.6%; text-align:center; padding: 2px 3px; color:#ffffff;">Lect. anterior</th>
+            <th style="width:16.6%; text-align:center; padding: 2px 3px; color:#ffffff;">Lect. actual</th>
+            <th style="width:16.6%; text-align:center; padding: 2px 3px; color:#ffffff;">Consumo</th>
+            <th style="width:16.6%; text-align:center; padding: 2px 3px; color:#ffffff;">Agua</th>
+            <th style="width:16.6%; text-align:center; padding: 2px 3px; color:#ffffff;">Otros</th>
+            <th style="width:16.6%; text-align:right; padding: 2px 3px; color:#ffffff;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:center; padding: 1px 3px;">
+              <span t-esc="rec['lectura_anterior']" t-options="{'widget': 'float', 'precision': 2}" />
+            </td>
+            <td style="text-align:center; padding: 1px 3px;">
+              <span t-esc="rec['lectura_actual']" t-options="{'widget': 'float', 'precision': 2}" />
+            </td>
+            <td style="text-align:center; padding: 1px 3px;">
+              <span t-esc="rec['consumo']" t-options="{'widget': 'float', 'precision': 2}" />
+            </td>
+            <td style="text-align:center; padding: 1px 3px;">
+              <span t-attf-style="#{'color:#c62828; font-weight:bold;' if rec['tiene_exceso'] else ''}"
+                t-esc="rec['agua']"
+                t-options="{'widget': 'monetary', 'display_currency': rec['currency']}" />
+            </td>
+            <td style="text-align:center; padding: 1px 3px;">
+              <span t-esc="rec['otros']"
+                t-options="{'widget': 'monetary', 'display_currency': rec['currency']}" />
+            </td>
+            <td style="text-align:right; padding: 1px 3px;">
+              <span t-esc="rec['total']"
+                t-options="{'widget': 'monetary', 'display_currency': rec['currency']}" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="recibo_leyenda" style="font-size: 9px; line-height:1.2; margin-bottom: 4px;">
+        <t t-if="rec['leyenda']">
+          <t t-out="rec['leyenda']" />
+        </t>
+        <t t-else="">
+          <p style="margin: 0;">Cualquier consulta relacionada</p>
+        </t>
+      </div>
+
+      <div t-if="rec['fecha_pago_disponible']" style="font-size: 9px; margin-bottom: 2px;">
+        <strong>Puede realizar su pago a partir de</strong>
+        <span t-esc="rec['fecha_pago_disponible']" t-options="{'widget': 'date'}" />
+      </div>
+
+      <div style="font-size: 8px; color: #666; text-align:right;">
+        Generado el
+        <span t-esc="fecha_generacion" t-options="{'widget': 'date'}" />
+        <span t-if="rec['tiene_exceso']" style="color:#c62828; font-weight:bold;">(Exceso)</span>
+      </div>
+    </div>
+  </template>
+
+  <!-- Template principal: recibo individual (usado desde el formulario de Residencia) -->
+  <!-- Sin header (ni logo, ni nombre de compañía fuera del cuadro): el logo se muestra
+       dentro de la card. El footer se mantiene igual al estándar de Odoo. -->
+  <template id="report_recibo_residencia_mensual">
+    <t t-call="web.html_container">
+      <t t-foreach="recibos" t-as="rec">
+        <t t-set="company" t-value="rec['company'].sudo()" />
+
+        <div t-attf-class="footer o_standard_footer o_company_#{company.id}_layout">
+          <div class="text-center" style="border-top: 1px solid black;">
+            <ul class="list-inline mb4">
+              <div t-field="company.report_footer" />
+            </ul>
+            <div t-if="report_type == 'pdf'" class="text-muted">
+              Page: <span class="page" /> / <span class="topage" />
+            </div>
+          </div>
+        </div>
+
+        <div class="article" t-att-data-oe-model="rec['lectura']._name" t-att-data-oe-id="rec['lectura'].id">
+          <div class="page">
+            <t t-call="iit_asovec.recibo_residencia_lectura_card" />
+          </div>
+        </div>
+      </t>
+    </t>
+  </template>
+
+</odoo>
