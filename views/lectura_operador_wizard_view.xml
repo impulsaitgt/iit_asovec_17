@@ -11,7 +11,17 @@
                         string="💾 Guardar"
                         type="object"
                         class="btn-primary btn-lg"
-                        invisible="not contador_id" />
+                        invisible="not contador_id or es_inactivo or (ultima_en_borrador and not modo_correccion)" />
+                    <button name="action_corregir_ultima"
+                        string="✎ Corregir última lectura"
+                        type="object"
+                        class="btn-secondary btn-lg"
+                        invisible="not contador_id or es_inactivo or modo_correccion or not ultima_en_borrador" />
+                    <button name="action_volver_nueva"
+                        string="↩ Nueva lectura"
+                        type="object"
+                        class="btn-secondary btn-lg"
+                        invisible="not modo_correccion" />
                     <button name="action_cancelar"
                         type="object"
                         string="✖ Cancelar"
@@ -21,12 +31,35 @@
                 <sheet>
                     <field name="currency_id" invisible="1" />
                     <field name="foto_filename" invisible="1" />
+                    <field name="es_inactivo" invisible="1" />
+                    <field name="modo_correccion" invisible="1" force_save="1" />
+                    <field name="line_id" invisible="1" force_save="1" />
+                    <field name="ultima_en_borrador" invisible="1" />
 
                     <div class="text-center mb-4">
                         <field name="residencia_id" nolabel="1" autofocus="1"
                             options="{'no_create': True, 'no_open': True}"
                             placeholder="Buscar residencia..."
                             class="o_asovec_titulo_grande" />
+                    </div>
+
+                    <div class="alert alert-danger text-center" role="alert"
+                        invisible="not es_inactivo">
+                        <strong>⚠ Residencia/Contador inactivo:</strong>
+                        no se pueden registrar nuevas lecturas hasta reactivarlo.
+                    </div>
+
+                    <div class="alert alert-info text-center" role="alert"
+                        invisible="not modo_correccion">
+                        <strong>✎ Corrigiendo la última lectura registrada de este contador.</strong>
+                    </div>
+
+                    <div class="alert alert-warning text-center" role="alert"
+                        invisible="not ultima_en_borrador or modo_correccion or es_inactivo">
+                        <strong>⚠ Lectura anterior en borrador:</strong>
+                        no se puede ingresar una nueva lectura hasta que el cargo del mes
+                        anterior esté confirmado (posteado). Puede usar "Corregir última
+                        lectura" si lo que necesita es corregir ese registro.
                     </div>
 
                     <group invisible="not contador_id">
@@ -42,6 +75,7 @@
                             <field name="lectura_anterior" readonly="1" force_save="1"
                                 class="o_asovec_campo_grande" />
                             <field name="lectura" required="1"
+                                readonly="es_inactivo or (ultima_en_borrador and not modo_correccion)"
                                 class="o_asovec_campo_grande" />
                             <field name="consumo" readonly="1"
                                 class="o_asovec_campo_grande" />
@@ -73,6 +107,24 @@
                     </group>
                 </sheet>
             </form>
+        </field>
+    </record>
+
+    <!-- Variante usada cuando se llega desde el Listado de Residencias por Proyecto:
+         la residencia ya viene preseleccionada, así que el foco debe quedar en
+         "Lectura actual" en vez de en el buscador de residencia. -->
+    <record id="view_asovec_lectura_operador_wizard_form_desde_listado" model="ir.ui.view">
+        <field name="name">asovec.lectura_operador_wizard.form.desde.listado</field>
+        <field name="model">asovec.lectura_operador_wizard</field>
+        <field name="inherit_id" ref="view_asovec_lectura_operador_wizard_form" />
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <field name="residencia_id" position="attributes">
+                <attribute name="autofocus"></attribute>
+            </field>
+            <field name="lectura" position="attributes">
+                <attribute name="autofocus">1</attribute>
+            </field>
         </field>
     </record>
 

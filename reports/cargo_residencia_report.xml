@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="action_report_cargo_residencia" model="ir.actions.report">
+    <field name="name">Recibo de Cargo (Cobro Mensual)</field>
+    <field name="model">asovec.proyecto_cobro_mensual_line</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">iit_asovec.report_cargo_residencia</field>
+    <field name="report_file">iit_asovec.report_cargo_residencia</field>
+    <field name="print_report_name">'Cargo - %s' % (object.residencia_id.name)</field>
+  </record>
+
+  <template id="report_cargo_residencia">
+    <t t-call="web.html_container">
+      <t t-foreach="cargos" t-as="cargo">
+        <div class="article" t-att-data-oe-model="cargo['line']._name" t-att-data-oe-id="cargo['line'].id">
+          <div class="page">
+            <div style="border: 1px solid #333; border-radius: 6px; padding: 16px 20px;">
+
+              <table style="width:100%; margin-bottom:14px; border-collapse:collapse;">
+                <tr>
+                  <td style="width:45%; vertical-align:middle;">
+                    <img t-if="cargo['logo']" t-att-src="image_data_uri(cargo['logo'])"
+                      style="max-height: 70px; max-width: 220px;" alt="Logo" />
+                  </td>
+                  <td style="width:55%; text-align:right; vertical-align:middle;">
+                    <div style="font-size:16px; font-weight:bold;" t-esc="cargo['diario'] or 'Cargo'" />
+                    <div style="font-size:13px;">No. <span t-esc="cargo['numero']" /></div>
+                    <div style="font-size:11px;">
+                      Fecha: <span t-esc="cargo['fecha']" t-options="{'widget': 'date'}" />
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="font-size:11px; line-height:1.4; margin-bottom:10px;">
+                <div><strong>Nombre:</strong> <span t-esc="cargo['cliente']" /></div>
+                <div><strong>Dirección:</strong> <span t-esc="cargo['direccion']" /></div>
+                <div><strong>NIT:</strong> <span t-esc="cargo['nit']" /></div>
+              </div>
+
+              <table style="width:100%; margin-bottom:12px; font-size:11px;">
+                <tr>
+                  <td style="width:50%; vertical-align:top;">
+                    <div><strong>No. CUENTA:</strong> <span t-esc="cargo['cuenta']" /></div>
+                    <div><strong>Período:</strong> <span t-esc="cargo['periodo']" /></div>
+                  </td>
+                  <td style="width:50%; text-align:right; vertical-align:top;">
+                    <div><strong>Contador:</strong> <span t-esc="cargo['contador']" /></div>
+                    <div>
+                      <strong>Lectura Anterior:</strong>
+                      <span t-esc="cargo['lectura_anterior']" t-options="{'widget': 'float', 'precision': 2}" />
+                      - <strong>Lectura Actual:</strong>
+                      <span t-esc="cargo['lectura_actual']" t-options="{'widget': 'float', 'precision': 2}" />
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <table class="table table-sm" style="width:100%; font-size:11px; border-collapse:collapse;">
+                <thead>
+                  <tr style="background-color:#009999; color:#ffffff;">
+                    <th style="padding:5px 8px; text-align:left; color:#ffffff;">DESCRIPCION</th>
+                    <th style="padding:5px 8px; text-align:right; color:#ffffff;">VALOR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr t-foreach="cargo['servicios']" t-as="servicio">
+                    <td style="padding:3px 8px; border-bottom:1px solid #ddd;" t-esc="servicio['nombre']" />
+                    <td style="padding:3px 8px; text-align:right; border-bottom:1px solid #ddd;"
+                      t-esc="servicio['valor']" t-options="{'widget': 'monetary', 'display_currency': cargo['currency']}" />
+                  </tr>
+                  <tr t-if="not cargo['servicios']">
+                    <td colspan="2" style="padding:6px 8px; text-align:center; color:#888;">
+                      Sin cargo generado
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:5px 8px; font-weight:bold;">Total</td>
+                    <td style="padding:5px 8px; text-align:right; font-weight:bold;"
+                      t-esc="cargo['total']" t-options="{'widget': 'monetary', 'display_currency': cargo['currency']}" />
+                  </tr>
+                </tbody>
+              </table>
+
+            </div>
+          </div>
+        </div>
+      </t>
+    </t>
+  </template>
+
+</odoo>
