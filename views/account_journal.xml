@@ -8,6 +8,9 @@
         <field name="arch" type="xml">
             <field name="type" position="after">
                 <field name="aso_cargo"/>
+                <field name="convenio_principal" readonly="aso_cargo != 'Si'"/>
+                <field name="aso_cargo_otro"/>
+                <field name="convenio_otro" readonly="aso_cargo_otro != 'Si'"/>
             </field>
         </field>
     </record>

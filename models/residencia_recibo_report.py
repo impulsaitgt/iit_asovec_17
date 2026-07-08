@@ -70,11 +70,7 @@ class ReportReciboResidenciaMensual(models.AbstractModel):
                 else:
                     logos_cache[company.id] = False
 
-            direccion = " ".join(filter(None, [
-                residencia.calle,
-                residencia.no_casa,
-                proyecto.name,
-            ]))
+            direccion = residencia.direccion_real
 
             move = lectura.invoice_move_id
             agua = lectura.pago_total

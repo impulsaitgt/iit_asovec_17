@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_analisis_mensual" model="ir.actions.report">
+        <field name="name">Análisis Mensual de la Asociación</field>
+        <field name="model">asovec.proceso_analisis_mensual_wizard</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">iit_asovec.report_analisis_mensual_document</field>
+        <field name="report_file">iit_asovec.report_analisis_mensual_document</field>
+        <field name="binding_model_id" eval="False" />
+    </record>
+
+    <template id="report_analisis_mensual_document">
+        <html>
+            <head>
+                <meta charset="utf-8" />
+                <title>Análisis Mensual de la Asociación</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+                        background: #f4f5f7;
+                        color: #2b2b2b;
+                        margin: 0;
+                        padding: 24px;
+                    }
+                    .container { max-width: 1400px; margin: 0 auto; }
+                    .header {
+                        background: #ffffff;
+                        border-radius: 10px;
+                        padding: 20px 24px;
+                        margin-bottom: 20px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                    }
+                    .header table { border-collapse: collapse; }
+                    .header td { vertical-align: middle; padding: 0; }
+                    .header img { max-height: 70px; padding-right: 20px; }
+                    .header h1 { font-size: 20px; margin: 0 0 4px 0; color: #1a1a1a; }
+                    .header .subtitulo { color: #666; font-size: 14px; }
+
+                    /* Nota: se usa inline-block (no CSS grid/flex) para que estas tarjetas
+                       tambien se vean bien al exportar a PDF con el motor viejo de
+                       wkhtmltopdf, que no soporta grid/flex de forma confiable. */
+                    .kpi-grid, .servicios-grid { margin-bottom: 16px; }
+                    .kpi-card, .servicio-card {
+                        display: inline-block;
+                        vertical-align: top;
+                        width: 180px;
+                        background: #ffffff;
+                        border-radius: 8px;
+                        padding: 14px 16px;
+                        margin: 0 8px 8px 0;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                        border-left: 4px solid #009999;
+                    }
+                    .kpi-card .kpi-label { font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: .04em; }
+                    .kpi-card .kpi-value { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-top: 4px; }
+                    .kpi-card.saldo { border-left-color: #c62828; }
+                    .kpi-card.pagado { border-left-color: #2e7d32; }
+
+                    .servicio-card { width: 170px; border-left: none; padding: 10px 14px; }
+                    .servicio-card .nombre { font-size: 12px; color: #666; }
+                    .servicio-card .monto { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+
+                    .section-title {
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #444;
+                        margin: 0 0 10px 2px;
+                        text-transform: uppercase;
+                        letter-spacing: .03em;
+                    }
+
+                    .tabs {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 4px;
+                        margin-bottom: 0;
+                        border-bottom: 2px solid #ddd;
+                    }
+                    .tab-btn {
+                        background: #e9eaee;
+                        border: none;
+                        border-radius: 6px 6px 0 0;
+                        padding: 10px 18px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #555;
+                        cursor: pointer;
+                    }
+                    .tab-btn.active { background: #009999; color: #fff; }
+
+                    .tab-content {
+                        background: #ffffff;
+                        border-radius: 0 8px 8px 8px;
+                        padding: 18px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                        margin-bottom: 30px;
+                    }
+
+                    table.tabla-datos { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 14px; }
+                    table.tabla-datos th {
+                        background: #009999;
+                        color: #fff;
+                        padding: 8px 10px;
+                        text-align: right;
+                        white-space: nowrap;
+                    }
+                    table.tabla-datos th.text-left { text-align: left; }
+                    table.tabla-datos td { padding: 6px 10px; text-align: right; border-bottom: 1px solid #eee; white-space: nowrap; }
+                    table.tabla-datos td.text-left { text-align: left; }
+                    table.tabla-datos tbody tr:nth-child(even) { background: #fafafa; }
+                    table.tabla-datos tbody tr:hover { background: #f0f7f7; }
+
+                    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; color: #fff; }
+                    .badge-success { background: #2e7d32; }
+                    .badge-danger { background: #c62828; }
+                    .badge-info { background: #0277bd; }
+                    .badge-warning { background: #b8860b; }
+
+                    /* Esta página es principalmente para verse en pantalla (pestañas
+                       interactivas). Si se exporta/imprime a PDF, el botón "Print" que
+                       Odoo agrega automáticamente no ejecuta JavaScript, así que aquí se
+                       fuerza a que se vean todos los proyectos (uno por página) en vez de
+                       depender de las pestañas. */
+                    @media print {
+                        body { background: #fff; padding: 0; }
+                        .tabs { display: none; }
+                        .tab-content { display: block !important; page-break-after: always; box-shadow: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <main class="container">
+                    <div class="header">
+                        <table>
+                            <tr>
+                                <td t-if="logo_b64">
+                                    <img t-att-src="'data:image/png;base64,%s' % logo_b64" />
+                                </td>
+                                <td>
+                                    <h1>Análisis Mensual de la Asociación</h1>
+                                    <div class="subtitulo">
+                                        <t t-esc="mes_label" /> <t t-esc="anio" /> — <t t-esc="company.name" />
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- ===================== RESUMEN GLOBAL (toda la asociación) ===================== -->
+                    <div class="section-title">Resumen general — todos los proyectos</div>
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Residencias con cargo</div>
+                            <div class="kpi-value"><t t-esc="resumen_global['cantidad_residencias']" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total facturado</div>
+                            <div class="kpi-value"><t t-esc="'{:,.2f}'.format(resumen_global['total_facturado'])" /></div>
+                        </div>
+                        <div class="kpi-card pagado">
+                            <div class="kpi-label">Total pagado</div>
+                            <div class="kpi-value"><t t-esc="'{:,.2f}'.format(resumen_global['total_pagado'])" /></div>
+                        </div>
+                        <div class="kpi-card saldo">
+                            <div class="kpi-label">Saldo pendiente</div>
+                            <div class="kpi-value"><t t-esc="'{:,.2f}'.format(resumen_global['total_saldo'])" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Con lectura válida</div>
+                            <div class="kpi-value"><t t-esc="resumen_global['lectura_valida']" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Sin lectura</div>
+                            <div class="kpi-value"><t t-esc="resumen_global['sin_lectura']" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Inactivas</div>
+                            <div class="kpi-value"><t t-esc="resumen_global['inactivo']" /></div>
+                        </div>
+                    </div>
+
+                    <div class="servicios-grid">
+                        <t t-foreach="servicios_nombres" t-as="servicio_nombre">
+                            <div class="servicio-card">
+                                <div class="nombre"><t t-esc="servicio_nombre" /></div>
+                                <div class="monto"><t t-esc="'{:,.2f}'.format(resumen_global['por_servicio'].get(servicio_nombre, 0.0))" /></div>
+                            </div>
+                        </t>
+                    </div>
+
+                    <!-- ===================== PESTAÑAS POR PROYECTO ===================== -->
+                    <div class="section-title">Detalle por proyecto</div>
+                    <div class="tabs">
+                        <t t-foreach="proyectos_data" t-as="proy_data">
+                            <button type="button"
+                                t-attf-class="tab-btn #{proy_data_index == 0 and 'active' or ''}"
+                                t-attf-onclick="mostrarTab(event, 'proyecto-#{proy_data['proyecto'].id}')">
+                                <t t-esc="proy_data['proyecto'].name" />
+                            </button>
+                        </t>
+                    </div>
+
+                    <t t-foreach="proyectos_data" t-as="proy_data">
+                        <div t-attf-id="proyecto-#{proy_data['proyecto'].id}"
+                            t-attf-class="tab-content"
+                            t-attf-style="#{proy_data_index == 0 and 'display:block;' or 'display:none;'}">
+
+                            <div class="kpi-grid">
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Residencias con cargo</div>
+                                    <div class="kpi-value"><t t-esc="proy_data['resumen']['cantidad_residencias']" /></div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Total facturado</div>
+                                    <div class="kpi-value"><t t-esc="'{:,.2f}'.format(proy_data['resumen']['total_facturado'])" /></div>
+                                </div>
+                                <div class="kpi-card pagado">
+                                    <div class="kpi-label">Total pagado</div>
+                                    <div class="kpi-value"><t t-esc="'{:,.2f}'.format(proy_data['resumen']['total_pagado'])" /></div>
+                                </div>
+                                <div class="kpi-card saldo">
+                                    <div class="kpi-label">Saldo pendiente</div>
+                                    <div class="kpi-value"><t t-esc="'{:,.2f}'.format(proy_data['resumen']['total_saldo'])" /></div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Con lectura válida</div>
+                                    <div class="kpi-value"><t t-esc="proy_data['resumen']['lectura_valida']" /></div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Sin lectura</div>
+                                    <div class="kpi-value"><t t-esc="proy_data['resumen']['sin_lectura']" /></div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Inactivas</div>
+                                    <div class="kpi-value"><t t-esc="proy_data['resumen']['inactivo']" /></div>
+                                </div>
+                            </div>
+
+                            <div class="servicios-grid">
+                                <t t-foreach="servicios_nombres" t-as="servicio_nombre">
+                                    <div class="servicio-card">
+                                        <div class="nombre"><t t-esc="servicio_nombre" /></div>
+                                        <div class="monto"><t t-esc="'{:,.2f}'.format(proy_data['resumen']['por_servicio'].get(servicio_nombre, 0.0))" /></div>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <table class="tabla-datos">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">Residencia</th>
+                                        <th class="text-left">Cliente</th>
+                                        <th>Total</th>
+                                        <th>Pagado</th>
+                                        <th>Saldo</th>
+                                        <th class="text-left">Estado cargo</th>
+                                        <th class="text-left">Lectura</th>
+                                        <t t-foreach="servicios_nombres" t-as="servicio_nombre">
+                                            <th><t t-esc="servicio_nombre" /></th>
+                                        </t>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="proy_data['filas']" t-as="fila">
+                                        <tr>
+                                            <td class="text-left"><t t-esc="fila['line'].residencia_id.name" /></td>
+                                            <td class="text-left"><t t-esc="fila['line'].cliente_id.name or ''" /></td>
+                                            <td><t t-esc="'{:,.2f}'.format(fila['line'].amount_total)" /></td>
+                                            <td><t t-esc="'{:,.2f}'.format(fila['line'].amount_paid)" /></td>
+                                            <td><t t-esc="'{:,.2f}'.format(fila['line'].amount_balance)" /></td>
+                                            <td class="text-left">
+                                                <t t-set="mstate" t-value="fila['line'].move_state" />
+                                                <span t-attf-class="badge #{mstate == 'posted' and 'badge-success' or (mstate == 'draft' and 'badge-warning' or 'badge-danger')}">
+                                                    <t t-esc="mstate or 'Sin cargo'" />
+                                                </span>
+                                            </td>
+                                            <td class="text-left">
+                                                <t t-set="cl" t-value="fila['line'].con_lectura" />
+                                                <span t-attf-class="badge #{cl == 'Lectura Valida' and 'badge-success' or (cl == 'Inactivo' and 'badge-info' or 'badge-danger')}">
+                                                    <t t-esc="cl" />
+                                                </span>
+                                            </td>
+                                            <t t-foreach="servicios_nombres" t-as="servicio_nombre">
+                                                <td>
+                                                    <t t-if="servicio_nombre in fila['servicios']" t-esc="'{:,.2f}'.format(fila['servicios'][servicio_nombre])" />
+                                                    <t t-else="">—</t>
+                                                </td>
+                                            </t>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                </main>
+
+                <script>
+                    function mostrarTab(evt, id) {
+                        var contents = document.getElementsByClassName('tab-content');
+                        for (var i = 0; i &lt; contents.length; i++) { contents[i].style.display = 'none'; }
+                        var btns = document.getElementsByClassName('tab-btn');
+                        for (var i = 0; i &lt; btns.length; i++) { btns[i].classList.remove('active'); }
+                        document.getElementById(id).style.display = 'block';
+                        evt.currentTarget.classList.add('active');
+                    }
+                </script>
+            </body>
+        </html>
+    </template>
+</odoo>

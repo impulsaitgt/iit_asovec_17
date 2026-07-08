@@ -11,6 +11,7 @@
             <group>
               <field name="mes" />
               <field name="anio" />
+              <field name="journal_ids" widget="many2many_tags" />
             </group>
 
             <group invisible="not file_data">

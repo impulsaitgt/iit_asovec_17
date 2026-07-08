@@ -90,13 +90,16 @@
                                     <field name="invoice_status_badge"
                                         widget="badge"
                                         decoration-success="invoice_status_badge == 'invoiced'"
+                                        decoration-warning="invoice_status_badge == 'borrador'"
+                                        decoration-info="invoice_status_badge == 'migrado'"
                                         decoration-danger="invoice_status_badge == 'not_invoiced'" />
 
                                     <field name="payment_status_badge"
                                         widget="badge"
                                         decoration-success="payment_status_badge == 'paid'"
+                                        decoration-info="payment_status_badge == 'migrado'"
                                         decoration-danger="payment_status_badge == 'unpaid'"
-                                        invisible="not invoice_move_id" />
+                                        invisible="invoice_status_badge == 'not_invoiced'" />
 
                                     <field name="invoice_move_id" optional="hide"
                                         invisible="not invoice_move_id" />
@@ -170,6 +173,8 @@
                                                 <field name="invoice_status_badge"
                                                     widget="badge"
                                                     decoration-success="invoice_status_badge == 'invoiced'"
+                                                    decoration-warning="invoice_status_badge == 'borrador'"
+                                                    decoration-info="invoice_status_badge == 'migrado'"
                                                     decoration-danger="invoice_status_badge == 'not_invoiced'" />
                                                 <field name="invoice_move_id" readonly="1"
                                                     invisible="not invoice_move_id" />
@@ -178,8 +183,9 @@
                                                 <field name="payment_status_badge"
                                                     widget="badge"
                                                     decoration-success="payment_status_badge == 'paid'"
+                                                    decoration-info="payment_status_badge == 'migrado'"
                                                     decoration-danger="payment_status_badge == 'unpaid'"
-                                                    invisible="not invoice_move_id" />
+                                                    invisible="invoice_status_badge == 'not_invoiced'" />
                                             </group>
                                         </group>
                                     </sheet>
@@ -257,12 +263,15 @@
                 <field name="invoice_status_badge"
                     widget="badge"
                     decoration-success="invoice_status_badge == 'invoiced'"
+                    decoration-warning="invoice_status_badge == 'borrador'"
+                    decoration-info="invoice_status_badge == 'migrado'"
                     decoration-danger="invoice_status_badge == 'not_invoiced'"
                     invisible="es_inicial" />
 
                 <field name="payment_status_badge"
                     widget="badge"
                     decoration-success="payment_status_badge == 'paid'"
+                    decoration-info="payment_status_badge == 'migrado'"
                     decoration-danger="payment_status_badge == 'unpaid'"
                     invisible="es_inicial" />
 
@@ -352,6 +361,8 @@
                             <field name="invoice_status_badge"
                                 widget="badge"
                                 decoration-success="invoice_status_badge == 'invoiced'"
+                                decoration-warning="invoice_status_badge == 'borrador'"
+                                decoration-info="invoice_status_badge == 'migrado'"
                                 decoration-danger="invoice_status_badge == 'not_invoiced'" />
                             <field name="invoice_move_id" readonly="1"
                                 invisible="not invoice_move_id" />
@@ -360,8 +371,9 @@
                             <field name="payment_status_badge"
                                 widget="badge"
                                 decoration-success="payment_status_badge == 'paid'"
+                                decoration-info="payment_status_badge == 'migrado'"
                                 decoration-danger="payment_status_badge == 'unpaid'"
-                                invisible="not invoice_move_id" />
+                                invisible="invoice_status_badge == 'not_invoiced'" />
                         </group>
                     </group>
 

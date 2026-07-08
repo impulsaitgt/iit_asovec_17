@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_asovec_proceso_analisis_mensual_wizard_form" model="ir.ui.view">
+      <field name="name">asovec.proceso_analisis_mensual_wizard.form</field>
+      <field name="model">asovec.proceso_analisis_mensual_wizard</field>
+      <field name="arch" type="xml">
+        <form string="Análisis Mensual de la Asociación">
+          <sheet>
+            <group>
+              <field name="mes" />
+              <field name="anio" />
+            </group>
+
+            <footer>
+              <button name="action_generar" type="object" string="Generar" class="btn-primary" />
+              <button string="Cerrar" special="cancel" class="btn-secondary" />
+            </footer>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="proceso_analisis_mensual_wizard_action" model="ir.actions.act_window">
+      <field name="name">Análisis Mensual de la Asociación</field>
+      <field name="res_model">asovec.proceso_analisis_mensual_wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+  </data>
+</odoo>
