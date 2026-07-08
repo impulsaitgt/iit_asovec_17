@@ -396,6 +396,9 @@
                         string="💾 Guardar"
                         type="object"
                         class="btn-primary btn-lg" />
+                    <button special="cancel"
+                        string="✖ Cancelar"
+                        class="btn-secondary btn-lg" />
                 </header>
 
                 <sheet>
