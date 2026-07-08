@@ -26,6 +26,11 @@ class LecturaOperadorWizard(models.TransientModel):
 
     currency_id = fields.Many2one(related="residencia_id.currency_id", readonly=True)
 
+    # Solo informativos, para que el operador confirme que está en la residencia correcta.
+    cliente_id = fields.Many2one(related="residencia_id.cliente_id", string="Residente", readonly=True)
+    proyecto_aso_id = fields.Many2one(related="residencia_id.proyecto_aso_id", string="Proyecto", readonly=True)
+    direccion_real = fields.Char(related="residencia_id.direccion_real", string="Dirección", readonly=True)
+
     # Se lee en action_guardar para la validación de "no puede ser menor a la anterior".
     lectura_anterior = fields.Float(string="Lectura anterior", readonly=True)
     lectura = fields.Float(string="Lectura actual")
@@ -120,6 +125,17 @@ class LecturaOperadorWizard(models.TransientModel):
 
         # Reabre un asistente nuevo y vacío para seguir con la siguiente residencia,
         # sin volver a pasar por el listado de residencias.
+        return self._action_nuevo_formulario()
+
+    def action_cancelar(self):
+        # El "special=cancel" genérico de Odoo se queda pegado aquí: como el botón
+        # Guardar ya deja este asistente guardado (con id) antes de fallar la
+        # validación dentro de action_guardar, "descartar" no tiene nada que
+        # descartar y no navega a ningún lado. Por eso Cancelar siempre reabre un
+        # formulario nuevo en blanco, sin importar el estado actual.
+        return self._action_nuevo_formulario()
+
+    def _action_nuevo_formulario(self):
         return {
             "type": "ir.actions.act_window",
             "name": _("Registrar Lectura"),
