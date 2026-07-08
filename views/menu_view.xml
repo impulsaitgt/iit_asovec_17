@@ -121,6 +121,8 @@
         parent="procesos_menu" action="proceso_recibo_masivo_wizard_action" />
     <menuitem name="Generar CSV de Estado de Cuenta (Banco)" id="proceso_estado_cuenta_csv_opcion"
         parent="procesos_menu" action="proceso_estado_cuenta_csv_wizard_action" />
+    <menuitem name="Cargar Deudas/Facturas Anteriores" id="proceso_carga_deudas_opcion"
+        parent="procesos_menu" action="action_proceso_carga_deudas_wizard" />
 
     <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="60" />
     <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"
@@ -130,6 +132,8 @@
         action="action_asovec_estado_cuenta_analisis" />
     <menuitem name="Generar Excel de Estado de Lecturas" id="proceso_estado_lecturas_excel_opcion"
         parent="consultas_menu" action="proceso_estado_lecturas_excel_wizard_action" />
+    <menuitem name="Análisis Mensual de la Asociación" id="proceso_analisis_mensual_opcion"
+        parent="consultas_menu" action="proceso_analisis_mensual_wizard_action" />
 
 
     <menuitem name="Procesos" id="proceso_menu" parent="asovec_menu" />

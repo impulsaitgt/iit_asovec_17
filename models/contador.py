@@ -49,6 +49,15 @@ class Contador(models.Model):
 
     tiene_inicial = fields.Boolean(string="Tiene inicial", compute="_compute_tiene_inicial", store=True, readonly=True)
 
+    def init(self):
+        # Defensa adicional a nivel de base de datos: nunca debe existir más de un
+        # contador activo por residencia, incluso si algo escribe sin pasar por el ORM.
+        self._cr.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS asovec_contador_one_active_per_residencia
+            ON asovec_contador (residencia_id)
+            WHERE active IS TRUE
+        """)
+
     @api.depends('line_ids.es_inicial')
     def _compute_tiene_inicial(self):
         for rec in self:
@@ -67,35 +76,94 @@ class Contador(models.Model):
             rec.ultimo_consumo = last.consumo if last else 0.0
             rec.ultima_fecha = last.periodo_date if (last and last.periodo_date) else False
 
-    def _desactivar_otros_activos(self):
-        for rec in self:
-            if rec.active and rec.residencia_id:
-                self.search([
-                    ('id', '!=', rec.id),
-                    ('residencia_id', '=', rec.residencia_id.id),
-                    ('active', '=', True),
-                ]).write({'active': False})
+    def _check_no_other_active(self, residencia_id, exclude_id=None):
+        domain = [
+            ('residencia_id', '=', residencia_id),
+            ('active', '=', True),
+        ]
+        if exclude_id:
+            domain.append(('id', '!=', exclude_id))
+        otro = self.search(domain, limit=1)
+        if otro:
+            residencia = self.env['asovec.residencia'].browse(residencia_id)
+            raise ValidationError(
+                f"La residencia {residencia.name} ya tiene un contador activo ({otro.name}). "
+                f"Desactívelo antes de activar/crear otro."
+            )
+
+    def _sync_residencia_active(self, residencia_ids):
+        residencia_ids = {rid for rid in residencia_ids if rid}
+        for residencia in self.env['asovec.residencia'].browse(residencia_ids):
+            tiene_activo = bool(self.search_count([
+                ('residencia_id', '=', residencia.id),
+                ('active', '=', True),
+            ]))
+            if tiene_activo and not residencia.activo:
+                residencia.activo = True
+            elif not tiene_activo and residencia.activo:
+                residencia.activo = False
 
     @api.model_create_multi
     def create(self, vals_list):
+        residencias_activas_en_lote = set()
         for vals in vals_list:
-            if vals.get('active', True) and vals.get('residencia_id'):
-                self.search([
-                    ('residencia_id', '=', vals['residencia_id']),
-                    ('active', '=', True),
-                ]).write({'active': False})
-        return super().create(vals_list)
+            residencia_id = vals.get('residencia_id')
+            if vals.get('active', True) and residencia_id:
+                if residencia_id in residencias_activas_en_lote:
+                    residencia = self.env['asovec.residencia'].browse(residencia_id)
+                    raise ValidationError(
+                        f"No se pueden crear varios contadores activos a la vez para la "
+                        f"residencia {residencia.name}."
+                    )
+                self._check_no_other_active(residencia_id)
+                residencias_activas_en_lote.add(residencia_id)
+
+        records = super().create(vals_list)
+
+        self._sync_residencia_active(records.mapped('residencia_id').ids)
+        return records
 
     def write(self, vals):
-        res = super().write(vals)
+        residencia_ids_to_sync = set(self.mapped('residencia_id').ids)
+        if 'residencia_id' in vals:
+            residencia_ids_to_sync.add(vals['residencia_id'])
+
         if vals.get('active') is True:
-            self._desactivar_otros_activos()
+            objetivos = {}
+            for rec in self:
+                target_id = vals.get('residencia_id', rec.residencia_id.id)
+                objetivos.setdefault(target_id, []).append(rec.id)
+            for target_id, rec_ids in objetivos.items():
+                if len(rec_ids) > 1:
+                    residencia = self.env['asovec.residencia'].browse(target_id)
+                    raise ValidationError(
+                        f"No se pueden activar varios contadores a la vez para la "
+                        f"residencia {residencia.name}."
+                    )
+                self._check_no_other_active(target_id, exclude_id=rec_ids[0])
+
+        res = super().write(vals)
+
+        if residencia_ids_to_sync:
+            self._sync_residencia_active(residencia_ids_to_sync)
+
+        return res
+
+    def unlink(self):
+        for rec in self:
+            if rec.line_ids:
+                raise ValidationError(
+                    f"No se puede eliminar el contador {rec.name}: tiene lecturas asociadas. "
+                    f"Inactívelo en su lugar para conservar el historial."
+                )
+        residencia_ids_to_sync = set(self.mapped('residencia_id').ids)
+        res = super().unlink()
+        self._sync_residencia_active(residencia_ids_to_sync)
         return res
 
     def action_activar(self):
         for rec in self:
             rec.active = True
-            rec._desactivar_otros_activos()
 
     def action_desactivar(self):
         self.write({'active': False})
@@ -183,37 +251,50 @@ class ContadorLine(models.Model):
     )
 
     force_invoiced = fields.Boolean(
-        string="Forzar facturado",
+        string="Migrado (Facturación)",
         default=False,
+        help="Marca esta lectura como migrada: no tiene una factura real asociada en el "
+             "sistema (viene de historial), pero no debe salir como pendiente. Se "
+             "mostrará como 'Migrado' en vez de 'Facturado', hasta que se opere "
+             "correctamente con una factura real.",
     )
 
     force_paid = fields.Boolean(
-        string="Forzar pagado",
+        string="Migrado (Pago)",
         default=False,
+        help="Marca el pago de esta lectura como migrado: no tiene un pago real "
+             "registrado en el sistema (viene de historial), pero no debe salir como "
+             "pendiente. Se mostrará como 'Migrado' en vez de 'Pagado', hasta que se "
+             "opere correctamente con un pago real.",
     )
 
     invoice_status_badge = fields.Selection(
-        selection=[("not_invoiced", "No facturado"), ("invoiced", "Facturado")],
+        selection=[
+            ("not_invoiced", "No facturado"),
+            ("borrador", "Borrador"),
+            ("invoiced", "Facturado"),
+            ("migrado", "Migrado"),
+        ],
         string="Facturación",
         compute="_compute_invoice_info",
         readonly=True,
     )
 
     payment_status_badge = fields.Selection(
-        selection=[("unpaid", "No pagado"), ("paid", "Pagado")],
+        selection=[("unpaid", "No pagado"), ("paid", "Pagado"), ("migrado", "Migrado")],
         string="Pago",
         compute="_compute_invoice_info",
         readonly=True,
     )
 
-    @api.depends("invoice_line_ids.move_id.payment_state", "force_invoiced", "force_paid")
+    @api.depends("invoice_line_ids.move_id.state", "invoice_line_ids.move_id.payment_state", "force_invoiced", "force_paid")
     def _compute_invoice_info(self):
         for rec in self:
             if rec.force_invoiced:
                 rec.invoice_line_count = len(rec.invoice_line_ids)
                 rec.invoice_move_id = False
-                rec.invoice_status_badge = "invoiced"
-                rec.payment_status_badge = "paid" if rec.force_paid else "unpaid"
+                rec.invoice_status_badge = "migrado"
+                rec.payment_status_badge = "migrado" if rec.force_paid else "unpaid"
                 continue
 
             lines = rec.invoice_line_ids
@@ -221,14 +302,21 @@ class ContadorLine(models.Model):
 
             if lines:
                 line = lines.sorted(lambda l: (l.move_id.id or 0, l.id))[0]
-                rec.invoice_move_id = line.move_id
+                move = line.move_id
+                rec.invoice_move_id = move
 
-                rec.invoice_status_badge = "invoiced"
-                rec.payment_status_badge = "paid" if rec.invoice_move_id.payment_state == "paid" else "unpaid"
+                if move.state == "posted":
+                    rec.invoice_status_badge = "invoiced"
+                elif move.state == "draft":
+                    rec.invoice_status_badge = "borrador"
+                else:
+                    rec.invoice_status_badge = "not_invoiced"
+
+                rec.payment_status_badge = "paid" if move.payment_state == "paid" else "unpaid"
             else:
                 rec.invoice_move_id = False
                 rec.invoice_status_badge = "not_invoiced"
-                rec.payment_status_badge = "unpaid" if not rec.force_paid else "paid"
+                rec.payment_status_badge = "migrado" if rec.force_paid else "unpaid"
 
     def action_view_invoice(self):
         self.ensure_one()
@@ -294,16 +382,20 @@ class ContadorLine(models.Model):
         return self.search(domain, order='id desc', limit=1)
 
     @api.model
+    def _siguiente_periodo(self, mes, anio):
+        y = int(anio)
+        m = int(mes)
+        if m == 12:
+            return "1", y + 1
+        return str(m + 1), y
+
+    @api.model
     def _next_period_for_contador(self, contador_id):
         last = self._last_mensual(contador_id)
         today = fields.Date.context_today(self)
         if not last:
             return str(today.month), int(today.year)
-        y = int(last.anio)
-        m = int(last.mes)
-        if m == 12:
-            return "1", y + 1
-        return str(m + 1), y
+        return self._siguiente_periodo(last.mes, last.anio)
 
     # -------------------------
     # Validaciones
@@ -350,6 +442,59 @@ class ContadorLine(models.Model):
                     f"El siguiente período debe ser {exp_m}/{exp_y}. No se permiten saltos de meses."
                 )
 
+    @api.model
+    def _validate_periodo_vals_en_lote(self, vals, estado):
+        """Igual que `_validate_periodo_vals`, pero considerando además las filas del
+        mismo contador ya procesadas dentro de este mismo lote de `create()` (necesario
+        para que una importación masiva con varios meses de un mismo contador en un solo
+        archivo valide/calcule la secuencia correctamente, ya que esas filas todavía no
+        existen en la base de datos mientras se procesa el lote)."""
+        contador_id = vals.get('contador_id')
+        if not contador_id:
+            raise ValidationError("Debe seleccionar un Contador.")
+
+        es_inicial = bool(vals.get('es_inicial', False))
+
+        if es_inicial:
+            if estado['inicial'] is not None:
+                raise ValidationError("Ya existe un registro inicial para este contador.")
+            domain_ini = [('contador_id', '=', contador_id), ('es_inicial', '=', True)]
+            if self.search(domain_ini, limit=1):
+                raise ValidationError("Ya existe un registro inicial para este contador.")
+            return
+
+        mes = vals.get('mes')
+        anio = vals.get('anio')
+        if not mes or not anio:
+            raise ValidationError("Debe seleccionar Mes y Año para una lectura mensual.")
+
+        for m in estado['mensuales']:
+            if str(m['mes']) == str(mes) and int(m['anio']) == int(anio):
+                raise ValidationError("Ya existe una lectura para ese Mes/Año en este contador.")
+
+        domain_dup = [
+            ('contador_id', '=', contador_id),
+            ('es_inicial', '=', False),
+            ('mes', '=', mes),
+            ('anio', '=', anio),
+        ]
+        if self.search(domain_dup, limit=1):
+            raise ValidationError("Ya existe una lectura para ese Mes/Año en este contador.")
+
+        if estado['mensuales']:
+            ultimo = estado['mensuales'][-1]
+            exp_m, exp_y = self._siguiente_periodo(ultimo['mes'], ultimo['anio'])
+        else:
+            last = self._last_mensual(contador_id)
+            if not last:
+                return
+            exp_m, exp_y = self._next_period_for_contador(contador_id)
+
+        if str(mes) != str(exp_m) or int(anio) != int(exp_y):
+            raise ValidationError(
+                f"El siguiente período debe ser {exp_m}/{exp_y}. No se permiten saltos de meses."
+            )
+
     # -------------------------
     # Cálculos
     # -------------------------
@@ -367,9 +512,21 @@ class ContadorLine(models.Model):
         residencia = contador.residencia_id
         proyecto = residencia.proyecto_aso_id if residencia else False
 
-        cobro_base = float(getattr(proyecto, 'cobro_base', 0.0) or 0.0) if proyecto else 0.0
+        # El "canon de agua" (cobro base) sigue en vivo el valor del proyecto, salvo que la
+        # residencia tenga marcado su propio "Canon de agua propio": en ese caso se usa el
+        # valor guardado en la residencia, independiente de lo que tenga el proyecto.
+        if residencia and residencia.cobro_base_especial:
+            cobro_base = float(residencia.cobro_base_especial_valor or 0.0)
+        else:
+            cobro_base = float(getattr(proyecto, 'cobro_base', 0.0) or 0.0) if proyecto else 0.0
         precio_maestro = float(getattr(proyecto, 'precio_metro', 0.0) or 0.0) if proyecto else 0.0
-        metro_base = float(getattr(proyecto, 'metro_base', 0.0) or 0.0) if proyecto else 0.0
+        # El "metro base (derecho)" sigue en vivo el valor del proyecto, salvo que la
+        # residencia tenga marcado su propio metro base ("Metro base propio"): en ese caso
+        # se usa el valor guardado en la residencia, independiente de lo que tenga el proyecto.
+        if residencia and residencia.metros_especiales:
+            metro_base = float(residencia.metros_especiales_cantidad or 0.0)
+        else:
+            metro_base = float(getattr(proyecto, 'metro_base', 0.0) or 0.0) if proyecto else 0.0
 
         consumo = (lectura_actual or 0.0) - (lectura_anterior or 0.0)
 
@@ -389,6 +546,25 @@ class ContadorLine(models.Model):
             'pago_extra': pago_extra,
             'pago_total': pago_total,
         }
+
+    def _refrescar_calculo_con_precio_actual(self):
+        """Vuelve a calcular y guardar base/metros_extras/pago_extra/pago_total de esta
+        lectura usando el precio VIGENTE del proyecto en este momento. Se usa justo antes
+        de generar un cargo que todavía no existe (por ejemplo desde "Completar
+        Faltantes"), para no usar una foto vieja del precio si el proyecto cambió de
+        precio después de que la lectura ya se había guardado."""
+        self.ensure_one()
+        if self.es_inicial:
+            return
+        calc = self._calcular_campos_linea(
+            self.contador_id, self.lectura, self.lectura_anterior, es_inicial=False
+        )
+        self.write({
+            'base': calc['base'],
+            'metros_extras': calc['metros_extras'],
+            'pago_extra': calc['pago_extra'],
+            'pago_total': calc['pago_total'],
+        })
 
     # -------------------------
     # PREVIEW
@@ -462,6 +638,12 @@ class ContadorLine(models.Model):
     # -------------------------
     @api.model_create_multi
     def create(self, vals_list):
+        # Estado en memoria por contador: permite que, dentro de un mismo lote (por
+        # ejemplo una importación masiva de Excel con varios meses de un mismo
+        # contador en un solo archivo), cada fila considere las filas anteriores del
+        # mismo lote y no solo lo que ya existía en la base de datos antes de crear.
+        estado_por_contador = {}
+
         for vals in vals_list:
             contador_id = vals.get('contador_id')
             lectura_actual = vals.get('lectura', 0.0)
@@ -470,14 +652,20 @@ class ContadorLine(models.Model):
             if not contador_id:
                 raise ValidationError("Debe seleccionar un Contador.")
 
-            self._validate_periodo_vals(vals, exclude_id=None)
+            estado = estado_por_contador.setdefault(contador_id, {'inicial': None, 'mensuales': []})
+
+            self._validate_periodo_vals_en_lote(vals, estado)
 
             if es_inicial:
                 lectura_anterior = 0.0
+            elif estado['mensuales']:
+                lectura_anterior = estado['mensuales'][-1]['lectura']
             else:
                 last_m = self._last_mensual(contador_id)
                 if last_m:
                     lectura_anterior = last_m.lectura or 0.0
+                elif estado['inicial'] is not None:
+                    lectura_anterior = estado['inicial']
                 else:
                     ini = self._get_inicial(contador_id)
                     lectura_anterior = (ini.lectura or 0.0) if ini else 0.0
@@ -489,6 +677,11 @@ class ContadorLine(models.Model):
 
             contador = self.env['asovec.contador'].browse(contador_id)
             vals.update(self._calcular_campos_linea(contador, lectura_actual, lectura_anterior, es_inicial=es_inicial))
+
+            if es_inicial:
+                estado['inicial'] = lectura_actual
+            else:
+                estado['mensuales'].append({'mes': vals.get('mes'), 'anio': vals.get('anio'), 'lectura': lectura_actual})
 
         records = super().create(vals_list)
 
@@ -591,10 +784,29 @@ class ContadorLine(models.Model):
         if move:
             move.unlink()
 
+    def _periodo_habilitado_para_calculo(self):
+        """Compara el período (mes/año) de esta lectura contra el umbral configurado en
+        la compañía ('Cálculos a partir de'). Si el período es anterior al umbral, no se
+        debe generar cargo (se está cargando historial de meses anteriores)."""
+        self.ensure_one()
+        company = self.company_id or self.env.company
+        mes_umbral = company.aso_calculos_mes
+        anio_umbral = company.aso_calculos_anio
+        if not mes_umbral or not anio_umbral:
+            return True
+        if not self.periodo_date:
+            return True
+        umbral = date(int(anio_umbral), int(mes_umbral), 1)
+        return self.periodo_date >= umbral
+
     def _generar_cargo_mensual(self):
         """Crea (o recrea, si estaba en borrador) el cargo correspondiente a esta lectura."""
         self.ensure_one()
         if self.es_inicial:
+            return
+        if not self._periodo_habilitado_para_calculo():
+            return
+        if self.residencia_id.no_paga_servicios:
             return
         proyecto = self.residencia_id.proyecto_aso_id
         if not proyecto:

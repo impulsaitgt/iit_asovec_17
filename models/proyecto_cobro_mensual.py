@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from .contador import mes_anio_anterior
 
 
 class ProyectoCobroMensual(models.Model):
@@ -26,13 +27,13 @@ class ProyectoCobroMensual(models.Model):
         ],
         string="Mes",
         required=True,
-        default=lambda self: fields.Date.today().strftime("%m"),
+        default=lambda self: mes_anio_anterior(fields.Date.today())[0].zfill(2),
         tracking=True,
     )
     year = fields.Integer(
         string="Año",
         required=True,
-        default=lambda self: fields.Date.today().year,
+        default=lambda self: mes_anio_anterior(fields.Date.today())[1],
         tracking=True,
     )
     state = fields.Selection(
@@ -168,7 +169,7 @@ class ProyectoCobroMensual(models.Model):
 
     def _get_servicios_automaticos(self):
         servicios = self.env["product.template"].search(
-            [("aso_es_servicio_aso", "=", True), ("aso_automatico", "=", True)]
+            [("aso_es_servicio_aso", "=", True), ("aso_automatico", "=", True), ("aso_activo", "=", True)]
         )
         if not servicios:
             raise UserError(_("No existen productos marcados como 'Servicio de Asociación'."))
@@ -200,15 +201,31 @@ class ProyectoCobroMensual(models.Model):
         productos_especiales = productos_especiales or self._get_productos_especiales()
 
         invoice_lines = []
+        # "Sin contador": solo debe generarse la cuota de contador inactivo, sin los
+        # servicios automáticos (basura, mantenimiento, etc.).
+        servicios = servicios if not residencia.sin_contador else self.env["product.template"]
         for t in servicios:
             product = t.product_variant_id
             if not product:
                 continue
 
+            if not residencia.activo and not t.tipo_servicio_aso_id.aso_cobra_inactivas:
+                # Este tipo de servicio no se cobra para residencias inactivas.
+                continue
+
             servicio_especial = ResidenciaLines.search([
                 ("residencia_id", "=", residencia.id), ("producto_id", "=", t.id)
             ])
-            precio = servicio_especial.precio if servicio_especial else t.list_price
+            if servicio_especial:
+                precio = servicio_especial.precio
+            else:
+                detalle_proyecto = t.tipo_servicio_aso_id.proyecto_ids.filtered(
+                    lambda d: d.proyecto_aso_id.id == residencia.proyecto_aso_id.id
+                )
+                if not detalle_proyecto:
+                    # No aplica a este proyecto: no hay precio configurado para él.
+                    continue
+                precio = detalle_proyecto[0].precio
 
             if precio > 0:
                 invoice_lines.append((0, 0, {
@@ -233,34 +250,45 @@ class ProyectoCobroMensual(models.Model):
         else:
             con_lectura = "Lectura Valida" if lectura else "Sin Lectura"
 
-            # Cuota base para contadores
-            cobro_base = lectura.base if lectura else residencia.proyecto_aso_id.cobro_base
-            servicio = productos_especiales["base"]
-            vals_line = {
-                "product_id": servicio.product_variant_id.id,
-                "name": servicio.name,
-                "quantity": 1.0,
-                "price_unit": cobro_base,
-                "tax_ids": [(6, 0, [])],   # sin impuestos
-            }
+            # Cuota base para contadores (se omite si es cero, p.ej. proyectos que solo
+            # cobran cuando hay exceso). Si no hay lectura este mes, se usa el "Canon de
+            # agua propio" de la residencia si está marcado, o si no el del proyecto.
             if lectura:
-                vals_line["contador_line_id"] = lectura.id
-            invoice_lines.append((0, 0, vals_line))
+                cobro_base = lectura.base
+            elif residencia.cobro_base_especial:
+                cobro_base = residencia.cobro_base_especial_valor
+            else:
+                cobro_base = residencia.proyecto_aso_id.cobro_base
+            base_generada = cobro_base > 0
+            if base_generada:
+                servicio = productos_especiales["base"]
+                vals_line = {
+                    "product_id": servicio.product_variant_id.id,
+                    "name": servicio.name,
+                    "quantity": 1.0,
+                    "price_unit": cobro_base,
+                    "tax_ids": [(6, 0, [])],   # sin impuestos
+                }
+                if lectura:
+                    vals_line["contador_line_id"] = lectura.id
+                invoice_lines.append((0, 0, vals_line))
 
             # Pago extra para contadores
             cobro_exceso = lectura.pago_extra if lectura else 0
             if cobro_exceso > 0:
                 servicio = productos_especiales["exceso"]
-                invoice_lines.append((0, 0, {
+                vals_line_exceso = {
                     "product_id": servicio.product_variant_id.id,
                     "name": servicio.name,
                     "quantity": 1.0,
                     "price_unit": cobro_exceso,
                     "tax_ids": [(6, 0, [])],   # sin impuestos
-                }))
-
-        if not invoice_lines:
-            raise UserError(_("No se pudieron generar líneas de cargo para la residencia '%s'.") % residencia.display_name)
+                }
+                if lectura and not base_generada:
+                    # La cuota base no generó línea: enlazar la lectura aquí para que
+                    # el seguimiento de facturación/pago siga funcionando.
+                    vals_line_exceso["contador_line_id"] = lectura.id
+                invoice_lines.append((0, 0, vals_line_exceso))
 
         return invoice_lines, con_lectura
 
@@ -294,9 +322,28 @@ class ProyectoCobroMensual(models.Model):
             if move:
                 move.unlink()
 
+        if lectura:
+            # Antes de generar el cargo, refrescar el cálculo de la lectura con el
+            # precio VIGENTE del proyecto, por si cambió desde que se guardó la
+            # lectura (evita que "Completar Faltantes" facture con un precio viejo).
+            lectura._refrescar_calculo_con_precio_actual()
+
         invoice_lines, con_lectura = self._build_invoice_lines_residencia(
             residencia, servicios, lectura, productos_especiales=productos_especiales
         )
+
+        if not invoice_lines:
+            # No hay nada que cobrar este período (por ejemplo, proyectos que solo
+            # cobran cuando hay exceso y esta residencia no tuvo exceso). Se deja
+            # constancia con una línea sin cargo asociado, para que no quede
+            # "pendiente" indefinidamente en próximas corridas de este mismo mes.
+            self.env["asovec.proyecto_cobro_mensual_line"].create({
+                "cobro_id": self.id,
+                "residencia_id": residencia.id,
+                "con_lectura": con_lectura,
+                "contador_line_id": lectura.id if lectura else False,
+            })
+            return False
 
         move = self.env["account.move"].create({
             "move_type": "out_invoice",
@@ -323,65 +370,120 @@ class ProyectoCobroMensual(models.Model):
     # --------------------
     # Acciones
     # --------------------
-    # Igual que al confirmar: generar en lotes evita exceder el tiempo límite de una
-    # sola petición web en proyectos con muchas residencias, y si se interrumpe a la
-    # mitad, lo ya generado queda guardado (se puede volver a presionar para continuar).
-    _GENERATE_CHUNK_SIZE = 50
+    # Generar en un solo click TODAS las residencias de un proyecto grande puede exceder
+    # el tiempo límite de una petición web (los commits intermedios no evitan que la
+    # petición completa se corte a la mitad). Por eso cada click de "Completar Faltantes"
+    # procesa como máximo un lote de este tamaño y devuelve una notificación con el
+    # avance: el usuario simplemente vuelve a presionar el botón hasta terminar, sin que
+    # nunca se muestre un error de tiempo agotado.
+    _GENERATE_CHUNK_SIZE = 150
+
+    def _residencias_pendientes_generar(self):
+        """Residencias del proyecto que todavía no tienen cargo, o cuyo cargo quedó
+        cancelado (regenerable). Las que ya tienen un cargo en borrador o posteado se
+        excluyen: un borrador ya generado cuenta como "hecho" para este botón (si cambia
+        una lectura, el cargo se regenera solo al guardarla, sin necesidad de este
+        proceso), así cada click avanza sobre residencias distintas en vez de repetir
+        siempre las mismas."""
+        self.ensure_one()
+        Residencia = self.env["asovec.residencia"]
+        residencias = Residencia.search([
+            ("proyecto_aso_id", "=", self.proyecto_aso_id.id),
+            ("no_paga_servicios", "=", False),
+        ], order="id")
+        existentes = {l.residencia_id.id: l for l in self.line_ids}
+
+        pendientes = Residencia
+        for r in residencias:
+            line = existentes.get(r.id)
+            if not line:
+                pendientes |= r
+            elif line.move_id and line.move_id.state == "cancel":
+                pendientes |= r
+        return pendientes
 
     def action_generate(self):
-        """Genera el cargo de cada residencia del proyecto que todavía no lo tenga, y regenera
-        (borra y vuelve a crear) los que sigan en borrador o cancelados, por si hubo cambios
-        (precios, lecturas corregidas, etc). Si alguna residencia ya tiene un cargo posteado,
-        se detiene con error: eso ya no se puede regenerar desde aquí."""
-        ContadorLine = self.env["asovec.contador.lines"]
-        Residencia = self.env["asovec.residencia"]
+        """Genera el cargo de un lote acotado de residencias del proyecto que todavía no lo
+        tengan (o que sigan en borrador/cancelado, por si hubo cambios de precios/lecturas).
+        Si alguna del lote ya tiene un cargo posteado con otro problema, se detiene con
+        error. Devuelve una notificación indicando cuántas quedan pendientes; hay que
+        volver a presionar el botón hasta que no quede ninguna."""
+        self.ensure_one()
 
-        for rec in self:
-            if rec.state != "draft":
-                raise UserError(_("Solo puedes generar en estado Borrador."))
+        if self.state != "draft":
+            raise UserError(_("Solo puedes generar en estado Borrador."))
+        if not self.proyecto_aso_id:
+            raise UserError(_("Debes seleccionar un Proyecto."))
 
-            if not rec.proyecto_aso_id:
-                raise UserError(_("Debes seleccionar un Proyecto."))
+        pendientes = self._residencias_pendientes_generar()
+        total_pendientes = len(pendientes)
 
-            residencias = Residencia.search([("proyecto_aso_id", "=", rec.proyecto_aso_id.id)], order="id")
-            if not residencias:
-                raise UserError(_("No hay residencias asociadas a este proyecto."))
+        if not total_pendientes:
+            self.message_post(body=_("No hay residencias pendientes por generar."))
+            return self._reabrir_form_action()
 
-            # Se buscan una sola vez (antes se repetían por cada residencia).
-            journal = rec._get_journal_cargo()
-            servicios = rec._get_servicios_automaticos()
-            productos_especiales = rec._get_productos_especiales()
-            mes_plano = str(int(rec.month))
+        lote = pendientes[: self._GENERATE_CHUNK_SIZE]
 
-            lecturas = ContadorLine.search([
-                ("residencia_id", "in", residencias.ids),
-                ("anio", "=", rec.year),
-                ("mes", "=", mes_plano),
-                ("es_inicial", "=", False),
-            ])
-            lectura_por_residencia = {l.residencia_id.id: l for l in lecturas}
+        journal = self._get_journal_cargo()
+        servicios = self._get_servicios_automaticos()
+        productos_especiales = self._get_productos_especiales()
+        mes_plano = str(int(self.month))
 
-            total = len(residencias)
-            for i in range(0, total, self._GENERATE_CHUNK_SIZE):
-                lote = residencias[i:i + self._GENERATE_CHUNK_SIZE]
-                try:
-                    for r in lote:
-                        rec._generar_cargo_residencia(
-                            r,
-                            lectura=lectura_por_residencia.get(r.id),
-                            journal=journal,
-                            servicios=servicios,
-                            productos_especiales=productos_especiales,
-                        )
-                except Exception as e:
-                    raise UserError(_(
-                        "Se generaron %s de %s residencias antes de encontrar un error. "
-                        "Lo ya generado queda guardado: corrige el problema y vuelve a "
-                        "presionar el botón para continuar con el resto.\n\nDetalle: %s"
-                    ) % (i, total, str(e)))
-                self.env.cr.commit()
+        lecturas = self.env["asovec.contador.lines"].search([
+            ("residencia_id", "in", lote.ids),
+            ("anio", "=", self.year),
+            ("mes", "=", mes_plano),
+            ("es_inicial", "=", False),
+        ])
+        lectura_por_residencia = {l.residencia_id.id: l for l in lecturas}
 
-        return True
+        generados = 0
+        try:
+            for r in lote:
+                self._generar_cargo_residencia(
+                    r,
+                    lectura=lectura_por_residencia.get(r.id),
+                    journal=journal,
+                    servicios=servicios,
+                    productos_especiales=productos_especiales,
+                )
+                generados += 1
+        except Exception as e:
+            self.env.cr.commit()
+            raise UserError(_(
+                "Se generaron %s residencias antes de encontrar un error (había %s "
+                "pendientes en total). Lo ya generado queda guardado: corrige el problema "
+                "y vuelve a presionar el botón para continuar con el resto.\n\nDetalle: %s"
+            ) % (generados, total_pendientes, str(e)))
+
+        self.env.cr.commit()
+
+        faltan = total_pendientes - generados
+        if faltan > 0:
+            message = _(
+                "Se generaron %s de %s residencias pendientes. Faltan %s: vuelve a "
+                "presionar el botón para continuar."
+            ) % (generados, total_pendientes, faltan)
+        else:
+            message = _("Se generaron las %s residencias pendientes. ¡Completo!") % generados
+
+        self.message_post(body=message)
+        return self._reabrir_form_action()
+
+    def _reabrir_form_action(self):
+        """Reabre este mismo registro en su vista de formulario. Se usa en vez de una
+        acción de recarga genérica (p.ej. 'soft_reload') porque esa depende de que el
+        cliente adivine cuál es el 'controlador actual', y en ciertos casos terminaba
+        mostrando otro registro de cobro mensual en vez de quedarse en este."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": self._name,
+            "view_mode": "form",
+            "views": [(False, "form")],
+            "res_id": self.id,
+            "target": "current",
+        }
 
     # Postear en lotes evita exceder el tiempo límite de una sola petición web
     # (el posteo de facturas de Odoo asigna el número de secuencia registro por

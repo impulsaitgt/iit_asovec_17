@@ -7,8 +7,9 @@
         <field name="inherit_id" ref="product.product_template_only_form_view" />
         <field name="arch" type="xml">
             <field name="categ_id" position="after">
-                <field name="aso_es_servicio_aso" />             
-                <field name="tipo_servicio_aso_id" invisible="not aso_es_servicio_aso"/>               
+                <field name="aso_es_servicio_aso" />
+                <field name="aso_activo" invisible="not aso_es_servicio_aso" />
+                <field name="tipo_servicio_aso_id" invisible="not aso_es_servicio_aso"/>
             </field>
         </field>
     </record>

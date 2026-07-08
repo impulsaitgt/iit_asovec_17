@@ -44,7 +44,7 @@ class ReportEstadoCuentaResidenciaLecturas(models.AbstractModel):
             lineas = []
             for l in lecturas:
                 monto = l.pago_total or 0.0
-                pagado = (l.payment_status_badge == "paid")
+                pagado = (l.payment_status_badge in ("paid", "migrado"))
                 if not pagado:
                     saldo_pendiente += monto
 
@@ -56,7 +56,7 @@ class ReportEstadoCuentaResidenciaLecturas(models.AbstractModel):
 
             report_docs.append({
                 "residencia": res,
-                "direccion": res.direccion or "",
+                "direccion": res.direccion_real or "",
                 "proyecto": res.proyecto_aso_id,
                 "contador": contador,
                 "lineas": lineas,

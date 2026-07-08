@@ -2,6 +2,7 @@ from . import residencia
 from . import proyecto_aso
 from . import product_template
 from . import contador
+from . import res_company
 from . import proyecto_cobro_mensual
 from . import account_journal
 from . import cobro_consulta_wizard
@@ -14,3 +15,6 @@ from . import proceso_recibo_masivo_wizard
 from . import residencia_recibo_masivo_report
 from . import proceso_estado_cuenta_csv_wizard
 from . import proceso_estado_lecturas_excel_wizard
+from . import proceso_carga_deudas_wizard
+from . import proceso_analisis_mensual_wizard
+from . import analisis_mensual_report

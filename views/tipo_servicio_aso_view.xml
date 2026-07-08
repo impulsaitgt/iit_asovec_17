@@ -12,13 +12,28 @@
                         <field name="name" placeholder="Nombre" />
                     </group>
                     <group>
-                        <field name="aso_automatico" />
-                        <field name="aso_agua" />
+                        <field name="aso_automatico" readonly="aso_migrado" />
+                        <field name="aso_cobra_inactivas" readonly="aso_migrado" invisible="not aso_automatico" />
+                        <field name="aso_agua" readonly="aso_migrado" />
                     </group>
                     <group string="Opciones para servicios de Contadores de Agua" invisible="not aso_agua">
-                        <field name="aso_agua_inactivo" />
-                        <field name="aso_agua_base" />
-                        <field name="aso_agua_exceso" />
+                        <field name="aso_agua_inactivo" readonly="aso_migrado" />
+                        <field name="aso_agua_base" readonly="aso_migrado" />
+                        <field name="aso_agua_exceso" readonly="aso_migrado" />
+                    </group>
+                    <notebook>
+                        <page string="Precios por Proyecto" name="precios_por_proyecto">
+                            <field name="proyecto_ids">
+                                <tree editable="bottom" string="Precios por Proyecto">
+                                    <field name="proyecto_aso_id" />
+                                    <field name="currency_id" column_invisible="1" />
+                                    <field name="precio" />
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                    <group>
+                        <field name="aso_migrado" />
                     </group>
                 </sheet>
             </form>
@@ -33,10 +48,12 @@
             <tree string="Tipo Servicio Asociacion">
                 <field name="name" />
                 <field name="aso_automatico" />
+                <field name="aso_cobra_inactivas" />
                 <field name="aso_agua" />
                 <field name="aso_agua_inactivo" />
                 <field name="aso_agua_base" />
                 <field name="aso_agua_exceso" />
+                <field name="aso_migrado" />
             </tree>
         </field>
     </record>

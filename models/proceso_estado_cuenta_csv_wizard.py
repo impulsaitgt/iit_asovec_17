@@ -2,6 +2,7 @@
 import base64
 import csv
 import io
+from collections import defaultdict
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -24,6 +25,13 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
 
     mes = fields.Selection(MONTH_SELECTION, string="Mes", required=True)
     anio = fields.Integer(string="Año", required=True)
+    journal_ids = fields.Many2many(
+        "account.journal", string="Diarios", required=True,
+        help="Diarios a considerar para calcular la deuda (mes y anteriores). Por "
+             "defecto sugiere el diario 'Cargo Asociacion = Si', pero se puede cambiar "
+             "o agregar otros (por ejemplo, si se cargaron deudas migradas en un diario "
+             "distinto).",
+    )
     file_data = fields.Binary(string="Archivo CSV", readonly=True)
     file_name = fields.Char(string="Nombre de archivo", readonly=True)
 
@@ -35,50 +43,73 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
             res["mes"] = mes
         if "anio" in fields_list and not res.get("anio"):
             res["anio"] = anio
+        if "journal_ids" in fields_list and not res.get("journal_ids"):
+            journal_aso = self.env["account.journal"].search([
+                ("aso_cargo", "=", "Si"),
+                ("company_id", "=", self.env.company.id),
+            ])
+            if journal_aso:
+                res["journal_ids"] = [(6, 0, journal_aso.ids)]
         return res
 
-    def _get_direccion(self, residencia, proyecto):
-        return " ".join(filter(None, [
-            residencia.calle,
-            residencia.no_casa,
-            proyecto.name,
-        ]))
+    def _get_direccion(self, residencia):
+        return residencia.direccion_real
+
+    def _get_moves_migrados_por_partner(self):
+        """Facturas de deuda migrada (cargadas con 'Cargar Deudas/Facturas Anteriores'),
+        agrupadas por cliente. No están ligadas a una residencia directamente (son
+        facturas sueltas, fuera de proyecto_cobro_mensual_line), así que para
+        relacionarlas con una residencia hay que ir por su cliente."""
+        Move = self.env["account.move"]
+        moves = Move.search([
+            ("journal_id", "in", self.journal_ids.ids),
+            ("state", "=", "posted"),
+            ("invoice_line_ids.product_id.product_tmpl_id.tipo_servicio_aso_id.aso_migrado", "=", True),
+        ])
+        por_partner = defaultdict(lambda: Move)
+        for move in moves:
+            por_partner[move.partner_id.id] |= move
+        return por_partner
 
     def _build_rows(self):
         self.ensure_one()
-        mes_padded = str(self.mes).zfill(2)
+        if not self.journal_ids:
+            raise UserError(_("Debes seleccionar al menos un Diario."))
 
-        journal = self.env["account.journal"].search([
-            ("aso_cargo", "=", "Si"),
-            ("company_id", "=", self.env.company.id),
-        ], limit=1)
-        if not journal:
-            raise UserError(_("No existe un Diario contable con 'aso_cargo = Si'."))
+        mes_padded = str(self.mes).zfill(2)
+        mes_int = int(self.mes)
+        fecha_mes = fields.Date.from_string("%s-%02d-01" % (self.anio, mes_int))
 
         CobroLine = self.env["asovec.proyecto_cobro_mensual_line"]
         residencias = self.env["asovec.residencia"].search([], order="proyecto_aso_id, name")
+        migradas_por_partner = self._get_moves_migrados_por_partner()
 
         rows = []
         for residencia in residencias:
-            proyecto = residencia.proyecto_aso_id
-
             lineas = CobroLine.search([
                 ("residencia_id", "=", residencia.id),
-                ("move_id.journal_id", "=", journal.id),
+                ("move_id.journal_id", "in", self.journal_ids.ids),
                 ("move_id.state", "=", "posted"),
                 ("cobro_id.state", "!=", "cancel"),
             ])
 
             del_mes = lineas.filtered(lambda l: l.month == mes_padded and l.year == self.anio)
-            anteriores = lineas - del_mes
+            anteriores = lineas.filtered(lambda l: (l.year, int(l.month)) < (self.anio, mes_int))
 
             saldo_mes = sum(del_mes.mapped("amount_residual"))
             saldo_anterior = sum(anteriores.mapped("amount_residual"))
 
+            moves_migrados = migradas_por_partner.get(residencia.cliente_id.id) if residencia.cliente_id else None
+            if moves_migrados:
+                del_mes_migrado = moves_migrados.filtered(lambda m: m.invoice_date == fecha_mes)
+                anteriores_migrado = moves_migrados.filtered(lambda m: m.invoice_date and m.invoice_date < fecha_mes)
+                saldo_mes += sum(del_mes_migrado.mapped("amount_residual"))
+                saldo_anterior += sum(anteriores_migrado.mapped("amount_residual"))
+
             rows.append([
                 residencia.name,
                 residencia.cliente_id.name or "",
-                self._get_direccion(residencia, proyecto),
+                self._get_direccion(residencia),
                 _format_monto(saldo_mes),
                 _format_monto(saldo_anterior),
                 "0",

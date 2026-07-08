@@ -78,7 +78,7 @@
                     <td style="text-align:center;">
                       <t t-set="inv" t-value="ln['lectura'].invoice_status_badge" />
                       <span
-                        t-attf-class="badge #{'bg-success' if inv == 'invoiced' else 'bg-danger'}">
+                        t-attf-class="badge #{'bg-success' if inv == 'invoiced' else ('bg-warning' if inv == 'borrador' else ('bg-info' if inv == 'migrado' else 'bg-danger'))}">
                         <t
                           t-esc="dict(ln['lectura']._fields['invoice_status_badge'].selection).get(inv)" />
                       </span>
@@ -86,7 +86,7 @@
 
                     <td style="text-align:center;">
                       <t t-set="pay" t-value="ln['lectura'].payment_status_badge" />
-                      <span t-attf-class="badge #{'bg-success' if pay == 'paid' else 'bg-danger'}">
+                      <span t-attf-class="badge #{'bg-success' if pay == 'paid' else ('bg-info' if pay == 'migrado' else 'bg-danger')}">
                         <t
                           t-esc="dict(ln['lectura']._fields['payment_status_badge'].selection).get(pay)" />
                       </span>

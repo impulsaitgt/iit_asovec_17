@@ -46,6 +46,7 @@
                     <group>
                         <group>
                             <field name="direccion" placeholder="Direccion" />
+                            <field name="direccion_real" readonly="1" />
                             <field name="sector" />
                             <field name="calle" placeholder="Calle" />
                             <field name="no_casa" placeholder="No. Casa" />
@@ -53,11 +54,16 @@
                         <group>
                             <field name="cliente_id" />
                             <field name="proyecto_aso_id" />
-                            <field name="activo" />
+                            <field name="activo" readonly="sin_contador" />
+                            <field name="no_paga_servicios" />
+                            <field name="sin_contador" readonly="no_paga_servicios" />
                             <field name="metros_especiales" />
                             <field name="metros_especiales_cantidad"
-                                invisible="not metros_especiales"
-                                required="metros_especiales" />
+                                readonly="not metros_especiales" />
+                            <field name="currency_id" invisible="1" />
+                            <field name="cobro_base_especial" />
+                            <field name="cobro_base_especial_valor"
+                                readonly="not cobro_base_especial" />
                         </group>
                     </group>
                     <group>
@@ -92,11 +98,15 @@
         <field name="arch" type="xml">
             <tree string="Residencias">
                 <field name="name" />
-                <field name="direccion" />
+                <field name="direccion_real" string="Dirección" />
                 <field name="detalle" />
                 <field name="cliente_id" />
                 <field name="proyecto_aso_id" />
                 <field name="activo" />
+                <field name="metros_especiales" optional="hide" />
+                <field name="metros_especiales_cantidad" optional="hide" />
+                <field name="cobro_base_especial" optional="hide" />
+                <field name="cobro_base_especial_valor" optional="hide" />
             </tree>
         </field>
     </record>
@@ -111,7 +121,7 @@
             <search string="Buscar Residencias">
                 <!-- Quick search -->
                 <field name="name" />
-                <field name="direccion" />
+                <field name="direccion_real" string="Dirección" />
                 <field name="cliente_id" />
                 <field name="proyecto_aso_id" />
                 <separator />
@@ -131,6 +141,20 @@
 
                 <separator />
 
+                <filter string="Metro base propio" name="con_metro_base_propio"
+                    domain="[('metros_especiales','=',True)]" />
+                <filter string="Metro base de proyecto" name="sin_metro_base_propio"
+                    domain="[('metros_especiales','=',False)]" />
+
+                <separator />
+
+                <filter string="Canon de agua propio" name="con_cobro_base_propio"
+                    domain="[('cobro_base_especial','=',True)]" />
+                <filter string="Canon de agua de proyecto" name="sin_cobro_base_propio"
+                    domain="[('cobro_base_especial','=',False)]" />
+
+                <separator />
+
                 <!-- Group By -->
                 <group expand="0" string="Agrupar por">
                     <filter string="Proyecto" name="group_proyecto"
@@ -139,6 +163,10 @@
                         context="{'group_by':'cliente_id'}" />
                     <filter string="Activo" name="group_activo"
                         context="{'group_by':'activo'}" />
+                    <filter string="Metro base propio" name="group_metros_especiales"
+                        context="{'group_by':'metros_especiales'}" />
+                    <filter string="Canon de agua propio" name="group_cobro_base_especial"
+                        context="{'group_by':'cobro_base_especial'}" />
                 </group>
             </search>
         </field>
