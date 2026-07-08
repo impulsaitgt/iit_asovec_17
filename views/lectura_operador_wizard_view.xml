@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_asovec_lectura_operador_wizard_form" model="ir.ui.view">
+        <field name="name">asovec.lectura_operador_wizard.form</field>
+        <field name="model">asovec.lectura_operador_wizard</field>
+        <field name="arch" type="xml">
+            <form string="Registrar Lectura" class="o_asovec_lectura_operador">
+                <header>
+                    <button name="action_guardar"
+                        string="💾 Guardar"
+                        type="object"
+                        class="btn-primary btn-lg"
+                        invisible="not contador_id" />
+                </header>
+
+                <sheet>
+                    <field name="currency_id" invisible="1" />
+                    <field name="foto_filename" invisible="1" />
+
+                    <div class="text-center mb-4">
+                        <field name="residencia_id" nolabel="1" autofocus="1"
+                            options="{'no_create': True, 'no_open': True}"
+                            placeholder="Buscar residencia..."
+                            class="o_asovec_titulo_grande" />
+                    </div>
+
+                    <group invisible="not contador_id">
+                        <group>
+                            <field name="contador_id" readonly="1" />
+                            <field name="mes" readonly="1" />
+                            <field name="anio" readonly="1" />
+                        </group>
+                    </group>
+
+                    <group invisible="not contador_id">
+                        <group>
+                            <field name="lectura_anterior" readonly="1"
+                                class="o_asovec_campo_grande" />
+                            <field name="lectura" required="1"
+                                class="o_asovec_campo_grande" />
+                            <field name="consumo" readonly="1"
+                                class="o_asovec_campo_grande" />
+                        </group>
+                    </group>
+
+                    <group invisible="not contador_id">
+                        <group>
+                            <field name="metros_extras" readonly="1"
+                                decoration-danger="metros_extras > 0"
+                                class="o_asovec_campo_grande" />
+                            <field name="pago_extra" readonly="1"
+                                decoration-danger="pago_extra > 0"
+                                class="o_asovec_campo_grande" />
+                        </group>
+                    </group>
+
+                    <field name="foto" widget="image"
+                        options="{'size': [300, 300]}"
+                        filename="foto_filename"
+                        invisible="pago_extra == 0" />
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="lectura_operador_wizard_action" model="ir.actions.act_window">
+        <field name="name">Registrar Lectura</field>
+        <field name="res_model">asovec.lectura_operador_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_asovec_lectura_operador_wizard_form" />
+        <field name="target">current</field>
+    </record>
+
+</odoo>

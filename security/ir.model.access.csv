@@ -16,3 +16,4 @@ accesos_tipo_servicio_aso_proyecto_administrador,Acceso a Precios por Proyecto d
 accesos_proceso_carga_deudas_wizard,Acceso a Proceso Carga Deudas wizard,model_asovec_proceso_carga_deudas_wizard,asovec_group_administrador,1,1,1,1
 accesos_proceso_carga_deudas_wizard_line,Acceso a Proceso Carga Deudas wizard Linea,model_asovec_proceso_carga_deudas_wizard_line,asovec_group_administrador,1,1,1,1
 accesos_proceso_analisis_mensual_wizard,Acceso a Proceso Analisis Mensual wizard,model_asovec_proceso_analisis_mensual_wizard,asovec_group_administrador,1,1,1,1
+accesos_lectura_operador_wizard,Acceso a Registrar Lectura (Operador) wizard,model_asovec_lectura_operador_wizard,asovec_group_administrador,1,1,1,1

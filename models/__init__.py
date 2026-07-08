@@ -18,3 +18,4 @@ from . import proceso_estado_lecturas_excel_wizard
 from . import proceso_carga_deudas_wizard
 from . import proceso_analisis_mensual_wizard
 from . import analisis_mensual_report
+from . import lectura_operador_wizard
