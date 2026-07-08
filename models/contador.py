@@ -436,6 +436,7 @@ class ContadorLine(models.Model):
 
         last = self._last_mensual(contador_id, exclude_id=exclude_id)
         if last:
+            self._check_cargo_anterior_confirmado(last)
             exp_m, exp_y = self._next_period_for_contador(contador_id)
             if str(mes) != str(exp_m) or int(anio) != int(exp_y):
                 raise ValidationError(
@@ -488,11 +489,24 @@ class ContadorLine(models.Model):
             last = self._last_mensual(contador_id)
             if not last:
                 return
+            self._check_cargo_anterior_confirmado(last)
             exp_m, exp_y = self._next_period_for_contador(contador_id)
 
         if str(mes) != str(exp_m) or int(anio) != int(exp_y):
             raise ValidationError(
                 f"El siguiente período debe ser {exp_m}/{exp_y}. No se permiten saltos de meses."
+            )
+
+    @api.model
+    def _check_cargo_anterior_confirmado(self, lectura_anterior):
+        """Evita ingresar una nueva lectura mensual si el cargo de la lectura del mes
+        anterior (mismo contador) todavía está en borrador (no confirmado/posteado)."""
+        if lectura_anterior.invoice_status_badge == 'borrador':
+            raise ValidationError(
+                f"No se puede ingresar la lectura: el cargo de "
+                f"{lectura_anterior.mes}/{lectura_anterior.anio} de este contador "
+                f"todavía está en borrador. Confírmalo (postéalo) antes de ingresar "
+                f"la siguiente lectura."
             )
 
     # -------------------------

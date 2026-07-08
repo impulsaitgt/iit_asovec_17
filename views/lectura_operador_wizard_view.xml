@@ -12,7 +12,8 @@
                         type="object"
                         class="btn-primary btn-lg"
                         invisible="not contador_id" />
-                    <button special="cancel"
+                    <button name="action_cancelar"
+                        type="object"
                         string="✖ Cancelar"
                         class="btn-secondary btn-lg" />
                 </header>
@@ -62,6 +63,14 @@
                         options="{'size': [300, 300]}"
                         filename="foto_filename"
                         invisible="pago_extra == 0" />
+
+                    <group invisible="not residencia_id" string="Datos de la residencia">
+                        <group>
+                            <field name="cliente_id" readonly="1" />
+                            <field name="proyecto_aso_id" readonly="1" />
+                            <field name="direccion_real" readonly="1" />
+                        </group>
+                    </group>
                 </sheet>
             </form>
         </field>
