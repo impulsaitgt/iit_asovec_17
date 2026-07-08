@@ -17,18 +17,17 @@ class LecturaOperadorWizard(models.TransientModel):
             ("activo", "=", True),
         ],
     )
-    # Solo de lectura en la vista (readonly="1" en el arch): quedan readonly=True aquí
-    # rompería que el onchange de residencia_id pueda persistirlos al guardar un
-    # registro nuevo (Odoo excluye del create() los campos readonly a nivel de modelo).
-    contador_id = fields.Many2one("asovec.contador", string="Contador")
-    mes = fields.Selection(MONTH_SELECTION, string="Mes (sugerido)")
-    anio = fields.Integer(string="Año (sugerido)")
+    # Calculados por el onchange de residencia_id, no editables por el usuario. La vista
+    # los marca "force_save" para que se guarden aunque sean readonly (si no, Odoo los
+    # excluye del create() al ser de solo lectura).
+    contador_id = fields.Many2one("asovec.contador", string="Contador", readonly=True)
+    mes = fields.Selection(MONTH_SELECTION, string="Mes (sugerido)", readonly=True)
+    anio = fields.Integer(string="Año (sugerido)", readonly=True)
 
     currency_id = fields.Many2one(related="residencia_id.currency_id", readonly=True)
 
-    # readonly=True aquí también rompería el guardado (ver comentario arriba); se lee en
-    # action_guardar para la validación de "no puede ser menor a la anterior".
-    lectura_anterior = fields.Float(string="Lectura anterior")
+    # Se lee en action_guardar para la validación de "no puede ser menor a la anterior".
+    lectura_anterior = fields.Float(string="Lectura anterior", readonly=True)
     lectura = fields.Float(string="Lectura actual")
     consumo = fields.Float(string="Consumo", readonly=True)
     metros_extras = fields.Float(string="Exceso (m³)", readonly=True)

@@ -415,9 +415,9 @@
 
                     <group>
                         <group>
-                            <field name="contador_id" readonly="1" />
-                            <field name="mes" readonly="1" />
-                            <field name="anio" readonly="1" />
+                            <field name="contador_id" readonly="1" force_save="1" />
+                            <field name="mes" readonly="1" force_save="1" />
+                            <field name="anio" readonly="1" force_save="1" />
                         </group>
                     </group>
 
