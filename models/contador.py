@@ -700,9 +700,42 @@ class ContadorLine(models.Model):
         records = super().create(vals_list)
 
         for rec in records:
-            rec._generar_cargo_mensual()
+            # La generación del cargo/factura es un efecto de sistema automático de
+            # registrar una lectura, no una acción contable que el usuario esté
+            # ejecutando a propósito: se corre con sudo para que un operador de
+            # lecturas (sin permisos de facturación) pueda registrar su lectura sin
+            # que la generación del cargo le falle por falta de acceso a los modelos
+            # contables internos.
+            rec.sudo()._generar_cargo_mensual()
 
         return records
+
+    def _check_no_cargo_posteado(self):
+        """No permite modificar el valor de la lectura si ya existe un cargo
+        POSTEADO (factura confirmada) para esa residencia/período.
+
+        Ojo: esto es independiente del umbral de cálculo de la compañía
+        ('Cálculos a partir de'). Ese umbral solo evita generar/regenerar cargos
+        automáticamente para historial migrado, pero un cargo real ya posteado
+        antes de que el umbral avanzara sigue existiendo y debe protegerse igual
+        (si no, `_generar_cargo_mensual` se salta por completo para períodos viejos
+        y la lectura se modificaría sin ningún control)."""
+        self.ensure_one()
+        if self.es_inicial:
+            return
+        mes_padded = str(self.mes or "").zfill(2)
+        line = self.env["asovec.proyecto_cobro_mensual_line"].search([
+            ("residencia_id", "=", self.residencia_id.id),
+            ("month", "=", mes_padded),
+            ("year", "=", self.anio),
+            ("move_state", "=", "posted"),
+        ], limit=1)
+        if line:
+            raise ValidationError(
+                f"No se puede modificar esta lectura: ya existe un cargo posteado "
+                f"({line.move_id.name}) para {self.residencia_id.display_name} en "
+                f"{self.mes}/{self.anio}."
+            )
 
     def write(self, vals):
         periodo_puede_cambiar = any(k in vals for k in ('mes', 'anio'))
@@ -710,6 +743,10 @@ class ContadorLine(models.Model):
         if periodo_puede_cambiar:
             for rec in self:
                 periodos_anteriores[rec.id] = (rec.mes, rec.anio, rec.es_inicial)
+
+        if 'lectura' in vals:
+            for rec in self:
+                rec._check_no_cargo_posteado()
 
         res = super().write(vals)
 
@@ -749,7 +786,7 @@ class ContadorLine(models.Model):
             if rec.id in periodos_anteriores:
                 old_mes, old_anio, old_es_inicial = periodos_anteriores[rec.id]
                 if not old_es_inicial and (old_mes != rec.mes or old_anio != rec.anio):
-                    rec._eliminar_cargo_periodo(rec.residencia_id, old_mes, old_anio)
+                    rec.sudo()._eliminar_cargo_periodo(rec.residencia_id, old_mes, old_anio)
 
             super(ContadorLine, rec).write({
                 'lectura_anterior': calc['lectura_anterior'],
@@ -760,7 +797,9 @@ class ContadorLine(models.Model):
                 'pago_total': calc['pago_total'],
             })
 
-            rec._generar_cargo_mensual()
+            # Ver comentario equivalente en create(): efecto de sistema, se corre con
+            # sudo para no exigirle permisos contables al operador de lecturas.
+            rec.sudo()._generar_cargo_mensual()
 
         return res
 

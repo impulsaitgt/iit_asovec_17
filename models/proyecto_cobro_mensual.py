@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import base64
+import csv
+import io
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from .contador import mes_anio_anterior
@@ -102,6 +106,19 @@ class ProyectoCobroMensual(models.Model):
         tracking=True,
     )
 
+    # --------------------
+    # Indicadores de avance (encabezado)
+    # --------------------
+    total_residencias = fields.Integer(string="Total residencias", compute="_compute_indicadores")
+    residencias_con_lectura = fields.Integer(string="Con lectura", compute="_compute_indicadores")
+    pct_con_lectura = fields.Float(string="% Con lectura", compute="_compute_indicadores")
+    residencias_sin_lectura = fields.Integer(string="Sin lectura", compute="_compute_indicadores")
+    pct_sin_lectura = fields.Float(string="% Sin lectura", compute="_compute_indicadores")
+    residencias_inactivas = fields.Integer(string="Inactivas", compute="_compute_indicadores")
+    pct_inactivas = fields.Float(string="% Inactivas", compute="_compute_indicadores")
+    residencias_cargo_generado = fields.Integer(string="Cargos generados", compute="_compute_indicadores")
+    pct_cargo_generado = fields.Float(string="% Cargos generados", compute="_compute_indicadores")
+
     def init(self):
         # Índice único parcial: solo cuando state != 'cancel'
         self._cr.execute("""
@@ -134,6 +151,147 @@ class ProyectoCobroMensual(models.Model):
     def _compute_balance(self):
         for rec in self:
             rec.total_balance = (rec.total_to_charge or 0.0) - (rec.total_paid or 0.0)
+
+    # --------------------
+    # Indicadores de avance (encabezado)
+    # --------------------
+    def _residencias_scope(self):
+        """Residencias que cuentan para este cobro mensual: las del proyecto que no
+        estén marcadas 'No paga servicios' (mismo criterio que `action_generate`)."""
+        self.ensure_one()
+        if not self.proyecto_aso_id:
+            return self.env["asovec.residencia"]
+        return self.env["asovec.residencia"].search([
+            ("proyecto_aso_id", "=", self.proyecto_aso_id.id),
+            ("no_paga_servicios", "=", False),
+        ])
+
+    def _residencias_con_lectura_ids(self):
+        self.ensure_one()
+        lines = self.line_ids.filtered(lambda l: l.con_lectura == "Lectura Valida")
+        return lines.mapped("residencia_id")
+
+    @api.depends("proyecto_aso_id", "line_ids.con_lectura", "line_ids.move_id", "line_ids.residencia_id")
+    def _compute_indicadores(self):
+        for rec in self:
+            residencias = rec._residencias_scope()
+            total = len(residencias)
+
+            inactivas = residencias.filtered(lambda r: not r.activo)
+            activas = residencias - inactivas
+
+            con_lectura = rec._residencias_con_lectura_ids() & activas
+            sin_lectura = activas - con_lectura
+
+            cargo_generado = rec.line_ids.filtered(lambda l: l.move_id).mapped("residencia_id") & residencias
+
+            rec.total_residencias = total
+            rec.residencias_con_lectura = len(con_lectura)
+            rec.residencias_sin_lectura = len(sin_lectura)
+            rec.residencias_inactivas = len(inactivas)
+            rec.residencias_cargo_generado = len(cargo_generado)
+
+            rec.pct_con_lectura = (len(con_lectura) / total) if total else 0.0
+            rec.pct_sin_lectura = (len(sin_lectura) / total) if total else 0.0
+            rec.pct_inactivas = (len(inactivas) / total) if total else 0.0
+            rec.pct_cargo_generado = (len(cargo_generado) / total) if total else 0.0
+
+    def _action_ver_residencias(self, residencias, nombre):
+        return {
+            "type": "ir.actions.act_window",
+            "name": nombre,
+            "res_model": "asovec.residencia",
+            "view_mode": "tree,form",
+            "domain": [("id", "in", residencias.ids)],
+        }
+
+    def action_ver_residencias_total(self):
+        self.ensure_one()
+        return self._action_ver_residencias(self._residencias_scope(), _("Residencias del proyecto"))
+
+    def action_ver_residencias_con_lectura(self):
+        self.ensure_one()
+        residencias = self._residencias_con_lectura_ids() & self._residencias_scope()
+        return self._action_ver_residencias(residencias, _("Residencias con lectura"))
+
+    def action_ver_residencias_sin_lectura(self):
+        self.ensure_one()
+        residencias = self._residencias_scope()
+        activas = residencias.filtered(lambda r: r.activo)
+        sin_lectura = activas - self._residencias_con_lectura_ids()
+        return self._action_ver_residencias(sin_lectura, _("Residencias sin lectura este mes"))
+
+    def action_ver_residencias_inactivas(self):
+        self.ensure_one()
+        inactivas = self._residencias_scope().filtered(lambda r: not r.activo)
+        return self._action_ver_residencias(inactivas, _("Residencias/Contadores inactivos"))
+
+    def action_ver_cargos_generados(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Cargos generados"),
+            "res_model": "asovec.proyecto_cobro_mensual_line",
+            "view_mode": "tree,form",
+            "domain": [("id", "in", self.line_ids.filtered(lambda l: l.move_id).ids)],
+        }
+
+    def action_refrescar(self):
+        """Vuelve a abrir este mismo registro (recalcula indicadores y estados de las
+        líneas) sin recargar toda la página del navegador."""
+        self.ensure_one()
+        return self._reabrir_form_action()
+
+    def action_exportar_csv(self):
+        """Exporta a CSV las residencias CON LECTURA VÁLIDA este período (una fila por
+        residencia/contador), con los datos calculados de la lectura y el importe de
+        cada servicio automático como columna, para que se pueda revisar antes de
+        confirmar."""
+        self.ensure_one()
+        return self._exportar_csv_categoria("Lectura Valida", "Lecturas_Validas")
+
+    def action_exportar_csv_inactivas(self):
+        """Exporta a CSV las residencias/contadores inactivos de este proyecto, para
+        que se pueda revisar si alguna debe reactivarse."""
+        self.ensure_one()
+        return self._exportar_csv_categoria("Inactivo", "Lecturas_Inactivas")
+
+    def action_exportar_csv_sin_lectura(self):
+        """Exporta a CSV las residencias activas que todavía no tienen lectura este
+        período, para que se pueda ver qué falta por recibir."""
+        self.ensure_one()
+        return self._exportar_csv_categoria("Sin Lectura", "Lecturas_SinLectura")
+
+    def _exportar_csv_categoria(self, categoria, nombre_archivo):
+        self.ensure_one()
+
+        Line = self.env["asovec.proyecto_cobro_mensual_line"]
+        residencias = self._residencias_scope()
+        rows = [r for r in Line._lecturas_rows(residencias, self.month, self.year) if r[3] == categoria]
+        if not rows:
+            raise UserError(_("No hay residencias en esa categoría para %s.") % self.name)
+
+        servicios = Line._csv_servicios()
+        buffer = io.StringIO()
+        writer = csv.writer(buffer, delimiter=";")
+        writer.writerow(Line._csv_header(servicios))
+        for residencia, lectura, move, con_lectura, amount_total, move_state, payment_state in rows:
+            writer.writerow(Line._csv_row(
+                residencia, lectura, move, con_lectura, amount_total, move_state, payment_state, servicios,
+            ))
+
+        csv_data = ("﻿" + buffer.getvalue()).encode("utf-8")
+        attachment = self.env["ir.attachment"].create({
+            "name": f"{nombre_archivo}_{self.name}.csv",
+            "type": "binary",
+            "datas": base64.b64encode(csv_data),
+            "mimetype": "text/csv",
+        })
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/web/content/{attachment.id}?download=true",
+            "target": "self",
+        }
 
     # --------------------
     # Helpers de generación de cargos (compartidos con la creación de lecturas)
@@ -658,6 +816,8 @@ class ProyectoCobroMensualLine(models.Model):
         currency_field="currency_id",
         readonly=True,
     )
+    foto = fields.Binary(related="contador_line_id.foto", string="Foto", readonly=True)
+    foto_filename = fields.Char(related="contador_line_id.foto_filename", string="Nombre foto", readonly=True)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -675,6 +835,12 @@ class ProyectoCobroMensualLine(models.Model):
             ))
         return self.contador_line_id.action_imprimir_recibo()
 
+    def action_imprimir_cargo(self):
+        """Imprime el nuevo formato de recibo (nombre del diario y número del
+        cargo si ya está posteado), sin importar el estado del cobro o del cargo."""
+        self.ensure_one()
+        return self.env.ref("iit_asovec.action_report_cargo_residencia").report_action(self)
+
     @api.depends("amount_total", "amount_residual")
     def _compute_line_balance(self):
         for line in self:
@@ -686,3 +852,116 @@ class ProyectoCobroMensualLine(models.Model):
             total = line.move_id.amount_total if line.move_id else 0.0
             residual = line.move_id.amount_residual if line.move_id else 0.0
             line.amount_paid = total - residual
+
+    # --------------------
+    # Formato CSV compartido (usado por el cobro mensual individual y por el proceso
+    # de consulta de lecturas de todos los proyectos, para que ambos exporten
+    # exactamente las mismas columnas).
+    # --------------------
+    @api.model
+    def _csv_servicios(self):
+        return self.env["product.template"].search([
+            ("aso_es_servicio_aso", "=", True),
+            ("aso_automatico", "=", True),
+            ("aso_activo", "=", True),
+        ])
+
+    @api.model
+    def _csv_header(self, servicios):
+        header = [
+            "Residencia", "Cliente", "Proyecto", "Contador", "Estado residencia",
+            "Con lectura", "Mes", "Año",
+            "Lectura anterior", "Lectura actual", "Consumo (m3)", "Exceso (m3)",
+            "Canon base", "Pago extra", "Pago total (agua)",
+        ]
+        header += [s.name for s in servicios]
+        header += ["Total cargo", "Estado cargo", "Estado de pago"]
+        return header
+
+    @api.model
+    def _csv_row(self, residencia, lectura, move, con_lectura, amount_total, move_state, payment_state, servicios):
+        def fmt2(value):
+            return f"{value or 0.0:.2f}"
+
+        contador = residencia._get_contador_activo()
+        row = [
+            residencia.name,
+            residencia.cliente_id.name or "",
+            residencia.proyecto_aso_id.name or "",
+            contador.name if contador else "",
+            "Activo" if residencia.activo else "Inactivo",
+            con_lectura or "",
+            lectura.mes if lectura else "",
+            lectura.anio if lectura else "",
+            fmt2(lectura.lectura_anterior if lectura else 0.0),
+            fmt2(lectura.lectura if lectura else 0.0),
+            fmt2(lectura.consumo if lectura else 0.0),
+            fmt2(lectura.metros_extras if lectura else 0.0),
+            fmt2(lectura.base if lectura else 0.0),
+            fmt2(lectura.pago_extra if lectura else 0.0),
+            fmt2(lectura.pago_total if lectura else 0.0),
+        ]
+
+        for servicio in servicios:
+            importe = 0.0
+            if move:
+                sline = move.invoice_line_ids.filtered(
+                    lambda l: l.product_id.product_tmpl_id == servicio
+                )[:1]
+                importe = sline.price_subtotal if sline else 0.0
+            row.append(fmt2(importe))
+
+        row += [fmt2(amount_total), move_state or "", payment_state or ""]
+        return row
+
+    @api.model
+    def _lecturas_rows(self, residencias, mes, anio):
+        """Para cada una de las `residencias` dadas, arma la tupla (residencia,
+        lectura, move, con_lectura, amount_total, move_state, payment_state) para el
+        mes/año pedido, leyendo directamente la lectura del contador y el cargo
+        asociado si ya existe. No depende de que 'Completar Faltantes' se haya
+        corrido: refleja el estado real de las lecturas en cualquier momento."""
+        if not residencias:
+            return []
+
+        mes_plano = str(int(mes))
+        mes_padded = str(mes).zfill(2)
+
+        lecturas = self.env["asovec.contador.lines"].search([
+            ("residencia_id", "in", residencias.ids),
+            ("anio", "=", anio),
+            ("mes", "=", mes_plano),
+            ("es_inicial", "=", False),
+        ])
+        lectura_por_residencia = {l.residencia_id.id: l for l in lecturas}
+
+        cobro_lines = self.search([
+            ("residencia_id", "in", residencias.ids),
+            ("month", "=", mes_padded),
+            ("year", "=", anio),
+            ("cobro_state", "!=", "cancel"),
+        ])
+        cobro_por_residencia = {cl.residencia_id.id: cl for cl in cobro_lines}
+
+        rows = []
+        for residencia in residencias.sorted(lambda r: r.name or ""):
+            lectura = lectura_por_residencia.get(residencia.id)
+            cobro_line = cobro_por_residencia.get(residencia.id)
+
+            if not residencia.activo:
+                con_lectura = "Inactivo"
+            elif lectura:
+                con_lectura = "Lectura Valida"
+            else:
+                con_lectura = "Sin Lectura"
+
+            rows.append((
+                residencia,
+                lectura,
+                cobro_line.move_id if cobro_line else False,
+                con_lectura,
+                cobro_line.amount_total if cobro_line else 0.0,
+                cobro_line.move_state if cobro_line else False,
+                cobro_line.payment_state if cobro_line else False,
+            ))
+        return rows

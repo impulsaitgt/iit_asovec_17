@@ -7,11 +7,15 @@ class Residencia(models.Model):
 
     def _get_contador_activo(self):
         self.ensure_one()
-        contador = self.contadores_ids.filtered(lambda c: c.active)[:1]
+        # 'contadores_ids' filtra automáticamente los inactivos (campo 'active' del
+        # modelo), por lo que hay que buscar con active_test=False para poder llegar
+        # al fallback cuando el único contador que existe está inactivo.
+        Contador = self.env['asovec.contador'].with_context(active_test=False)
+        contador = Contador.search([('residencia_id', '=', self.id), ('active', '=', True)], limit=1)
         if contador:
             return contador
         # fallback: el último si no hay activo
-        return self.contadores_ids.sorted(lambda c: c.id, reverse=True)[:1]
+        return Contador.search([('residencia_id', '=', self.id)], order='id desc', limit=1)
 
     def action_print_estado_cuenta_lecturas(self):
         self.ensure_one()

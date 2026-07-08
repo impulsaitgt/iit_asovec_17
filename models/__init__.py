@@ -19,3 +19,6 @@ from . import proceso_carga_deudas_wizard
 from . import proceso_analisis_mensual_wizard
 from . import analisis_mensual_report
 from . import lectura_operador_wizard
+from . import proceso_lecturas_csv_wizard
+from . import lectura_listado_wizard
+from . import cargo_residencia_report
