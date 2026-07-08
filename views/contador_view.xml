@@ -383,6 +383,73 @@
     </record>
 
     <!-- ===================== -->
+    <!--  LECTURAS - FORM OPERADOR (tablet, letra grande, campos mínimos) -->
+    <!-- ===================== -->
+    <record id="asovec_contador_lines_form_view_operador" model="ir.ui.view">
+        <field name="name">asovec.contador.lines.form.operador</field>
+        <field name="model">asovec.contador.lines</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <form string="Nueva Lectura" class="o_asovec_lectura_operador">
+                <header>
+                    <button name="action_save"
+                        string="💾 Guardar"
+                        type="object"
+                        class="btn-primary btn-lg" />
+                </header>
+
+                <sheet>
+                    <!-- Técnicos: ocultos pero necesarios para que se guarden con su valor
+                         por defecto (período, contador) y para generar el cargo normalmente. -->
+                    <field name="es_inicial" invisible="1" />
+                    <field name="currency_id" invisible="1" />
+                    <field name="foto_filename" invisible="1" />
+
+                    <div class="text-center mb-4">
+                        <field name="residencia_id" readonly="1" nolabel="1"
+                            class="o_asovec_titulo_grande" />
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="contador_id" readonly="1" />
+                            <field name="mes" readonly="1" />
+                            <field name="anio" readonly="1" />
+                        </group>
+                    </group>
+
+                    <group>
+                        <group>
+                            <field name="lectura_anterior" readonly="1"
+                                class="o_asovec_campo_grande" />
+                            <field name="lectura" autofocus="1" required="1"
+                                class="o_asovec_campo_grande" />
+                            <field name="consumo" readonly="1"
+                                class="o_asovec_campo_grande" />
+                        </group>
+                    </group>
+
+                    <group>
+                        <group>
+                            <field name="metros_extras" readonly="1"
+                                decoration-danger="metros_extras > 0"
+                                class="o_asovec_campo_grande" />
+                            <field name="pago_extra" readonly="1"
+                                decoration-danger="pago_extra > 0"
+                                class="o_asovec_campo_grande" />
+                        </group>
+                    </group>
+
+                    <field name="foto" widget="image"
+                        options="{'size': [300, 300]}"
+                        filename="foto_filename"
+                        invisible="pago_extra == 0" />
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===================== -->
     <!--  LECTURAS - SEARCH    -->
     <!-- ===================== -->
     <record id="asovec_contador_lines_search_view" model="ir.ui.view">

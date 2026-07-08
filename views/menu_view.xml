@@ -96,6 +96,8 @@
         action="residencia_action" />
 
     <menuitem name="Contadores" id="contadores_menu" parent="asovec_menu" sequence="20" />
+    <menuitem name="Registrar Lectura" id="lectura_operador_wizard_opcion" parent="contadores_menu"
+        action="lectura_operador_wizard_action" sequence="5" />
     <menuitem name="Contadores" id="contador_opcion" parent="contadores_menu"
         action="contador_action" />
     <menuitem name="Lecturas de Contador" id="contador_line_opcion" parent="contadores_menu"

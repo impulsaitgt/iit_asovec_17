@@ -1,0 +1,35 @@
+/* Vista "Nueva Lectura" simplificada para el operador de campo (tablet). */
+
+.o_asovec_lectura_operador .o_form_sheet {
+    max-width: 720px;
+    margin: 0 auto;
+    font-size: 22px;
+}
+
+.o_asovec_lectura_operador .o_asovec_titulo_grande .o_field_widget input,
+.o_asovec_lectura_operador .o_asovec_titulo_grande span {
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.o_asovec_lectura_operador .o_form_label {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.o_asovec_lectura_operador .o_asovec_campo_grande .o_field_widget input,
+.o_asovec_lectura_operador .o_asovec_campo_grande span {
+    font-size: 28px !important;
+    line-height: 1.4;
+}
+
+.o_asovec_lectura_operador input[type="text"],
+.o_asovec_lectura_operador input.o_input {
+    height: 56px;
+    padding: 8px 12px;
+}
+
+.o_asovec_lectura_operador .btn-lg {
+    font-size: 24px;
+    padding: 16px 32px;
+}

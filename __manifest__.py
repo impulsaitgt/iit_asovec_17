@@ -18,6 +18,7 @@
         'views/residencia_view.xml',
         'views/tipo_servicio_aso_view.xml',
         'views/contador_view.xml',
+        'views/lectura_operador_wizard_view.xml',
         'views/proyecto_cobro_mensual_view.xml',
         'views/product_template_view.xml',
         'views/account_journal.xml',
@@ -35,5 +36,10 @@
         'reports/recibo_residencia_mensual_report.xml',
         'reports/recibo_residencia_mensual_masivo_report.xml',
         'reports/analisis_mensual_report.xml'
-    ]
+    ],
+    'assets': {
+        'web.assets_backend': [
+            'iit_asovec/static/src/css/lectura_operador.css',
+        ],
+    },
 }
