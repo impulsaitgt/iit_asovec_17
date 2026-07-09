@@ -13,8 +13,18 @@
               <field name="anio" />
             </group>
 
+            <group invisible="not file_data">
+              <field name="file_name" invisible="1" />
+              <field name="file_data"
+                filename="file_name"
+                widget="binary"
+                readonly="1"
+                string="Archivo Excel generado" />
+            </group>
+
             <footer>
               <button name="action_generar" type="object" string="Generar" class="btn-primary" />
+              <button name="action_generar_excel" type="object" string="Generar Excel" class="btn-secondary" />
               <button string="Cerrar" special="cancel" class="btn-secondary" />
             </footer>
           </sheet>

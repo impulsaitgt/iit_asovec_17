@@ -41,20 +41,15 @@ class ReportAnalisisMensual(models.AbstractModel):
             resumen["por_servicio"][ml.product_id.name] += ml.price_unit
 
     @api.model
-    def _get_report_values(self, docids, data=None):
-        wizard = self.env["asovec.proceso_analisis_mensual_wizard"].browse(docids)
+    def _build_analisis_data(self, wizard):
+        """Arma el resumen global, el resumen y detalle por proyecto para el mes/año del
+        wizard. Se comparte entre el reporte HTML y la exportación a Excel, para que
+        ambos siempre muestren exactamente los mismos números."""
         wizard.ensure_one()
         mes = wizard.mes
         anio = wizard.anio
         mes_padded = str(mes).zfill(2)
         mes_label = dict(MONTH_SELECTION).get(mes, mes)
-
-        company = self.env.company
-        logo_b64 = False
-        if company.logo:
-            resized = image_process(base64.b64decode(company.logo), size=(0, LOGO_MAX_HEIGHT))
-            if resized:
-                logo_b64 = base64.b64encode(resized).decode()
 
         CobroLine = self.env["asovec.proyecto_cobro_mensual_line"]
         lines = CobroLine.search([
@@ -99,14 +94,31 @@ class ReportAnalisisMensual(models.AbstractModel):
             })
 
         return {
-            "doc_ids": docids,
-            "doc_model": "asovec.proceso_analisis_mensual_wizard",
-            "docs": wizard,
             "mes_label": mes_label,
             "anio": anio,
-            "company": company,
-            "logo_b64": logo_b64,
             "servicios_nombres": servicios_nombres,
             "resumen_global": resumen_global,
             "proyectos_data": proyectos_data,
+        }
+
+    @api.model
+    def _get_report_values(self, docids, data=None):
+        wizard = self.env["asovec.proceso_analisis_mensual_wizard"].browse(docids)
+        wizard.ensure_one()
+        datos = self._build_analisis_data(wizard)
+
+        company = self.env.company
+        logo_b64 = False
+        if company.logo:
+            resized = image_process(base64.b64decode(company.logo), size=(0, LOGO_MAX_HEIGHT))
+            if resized:
+                logo_b64 = base64.b64encode(resized).decode()
+
+        return {
+            "doc_ids": docids,
+            "doc_model": "asovec.proceso_analisis_mensual_wizard",
+            "docs": wizard,
+            "company": company,
+            "logo_b64": logo_b64,
+            **datos,
         }
