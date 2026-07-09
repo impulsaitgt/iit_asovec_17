@@ -55,21 +55,24 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
     def _get_direccion(self, residencia):
         return residencia.direccion_real
 
-    def _get_moves_migrados_por_partner(self):
+    def _get_moves_migrados_por_residencia(self):
         """Facturas de deuda migrada (cargadas con 'Cargar Deudas/Facturas Anteriores'),
-        agrupadas por cliente. No están ligadas a una residencia directamente (son
-        facturas sueltas, fuera de proyecto_cobro_mensual_line), así que para
-        relacionarlas con una residencia hay que ir por su cliente."""
+        agrupadas por residencia (campo `residencia_id` del cargo). No están ligadas a
+        una residencia mediante proyecto_cobro_mensual_line (son facturas sueltas), así
+        que se usa ese campo directo en vez de agrupar por cliente: un mismo cliente
+        puede ser dueño de varias residencias, y agrupar por cliente mezclaba la deuda
+        de una residencia con la de otra."""
         Move = self.env["account.move"]
         moves = Move.search([
             ("journal_id", "in", self.journal_ids.ids),
             ("state", "=", "posted"),
             ("invoice_line_ids.product_id.product_tmpl_id.tipo_servicio_aso_id.aso_migrado", "=", True),
         ])
-        por_partner = defaultdict(lambda: Move)
+        por_residencia = defaultdict(lambda: Move)
         for move in moves:
-            por_partner[move.partner_id.id] |= move
-        return por_partner
+            if move.residencia_id:
+                por_residencia[move.residencia_id.id] |= move
+        return por_residencia
 
     def _build_rows(self):
         self.ensure_one()
@@ -82,7 +85,7 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
 
         CobroLine = self.env["asovec.proyecto_cobro_mensual_line"]
         residencias = self.env["asovec.residencia"].search([], order="proyecto_aso_id, name")
-        migradas_por_partner = self._get_moves_migrados_por_partner()
+        migradas_por_residencia = self._get_moves_migrados_por_residencia()
 
         rows = []
         for residencia in residencias:
@@ -99,7 +102,7 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
             saldo_mes = sum(del_mes.mapped("amount_residual"))
             saldo_anterior = sum(anteriores.mapped("amount_residual"))
 
-            moves_migrados = migradas_por_partner.get(residencia.cliente_id.id) if residencia.cliente_id else None
+            moves_migrados = migradas_por_residencia.get(residencia.id)
             if moves_migrados:
                 del_mes_migrado = moves_migrados.filtered(lambda m: m.invoice_date == fecha_mes)
                 anteriores_migrado = moves_migrados.filtered(lambda m: m.invoice_date and m.invoice_date < fecha_mes)

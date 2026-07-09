@@ -93,6 +93,9 @@ class LecturaListadoWizard(models.TransientModel):
                 ini = inicial_por_contador.get(contador.id)
                 lectura_anterior = (ini.lectura or 0.0) if ini else 0.0
 
+            company = residencia.proyecto_aso_id.company_id or self.env.company
+            periodo_habilitado = Line._periodo_esta_habilitado(company, self.mes, self.anio)
+
             vals_list.append({
                 "residencia_id": residencia.id,
                 "contador_id": contador.id,
@@ -103,6 +106,7 @@ class LecturaListadoWizard(models.TransientModel):
                 "lectura_actual": lectura_este_mes.lectura if lectura_este_mes else 0.0,
                 "tiene_lectura": bool(lectura_este_mes),
                 "estado_lectura": "con_lectura" if lectura_este_mes else "pendiente",
+                "periodo_habilitado": periodo_habilitado,
             })
 
         if not vals_list:
@@ -160,8 +164,19 @@ class LecturaListadoWizardLine(models.TransientModel):
         string="Estado", readonly=True,
     )
 
+    # False cuando el mes/año buscado es anterior al umbral "Cálculos a partir de" de
+    # la compañía: ese período es historial migrado (ver
+    # ContadorLine._periodo_esta_habilitado) y no se debe poder registrar/corregir
+    # desde aquí. Se usa para ocultar el botón "Registrar" en la vista.
+    periodo_habilitado = fields.Boolean(string="Período habilitado", readonly=True, default=True)
+
     def action_ir_a_registrar(self):
         self.ensure_one()
+        if not self.periodo_habilitado:
+            raise UserError(_(
+                "No se puede registrar/corregir: %s/%s es un período anterior al umbral "
+                "de cálculos de la compañía (historial migrado)."
+            ) % (self.mes, self.anio))
         return {
             "type": "ir.actions.act_window",
             "name": _("Registrar Lectura"),

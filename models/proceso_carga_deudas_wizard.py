@@ -137,6 +137,7 @@ class ProcesoCargaDeudasWizard(models.TransientModel):
             "company_id": self.env.company.id,
             "journal_id": diario.id,
             "partner_id": residencia.cliente_id.id,
+            "residencia_id": residencia.id,
             "invoice_date": fecha,
             "ref": _("Migración %s - %s/%s") % (residencia.display_name, mes, anio),
             "invoice_line_ids": [(0, 0, {

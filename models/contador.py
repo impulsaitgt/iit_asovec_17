@@ -287,6 +287,70 @@ class ContadorLine(models.Model):
         readonly=True,
     )
 
+    def init(self):
+        # Defensa adicional a nivel de base de datos: una lectura mensual cuyo período
+        # (periodo_date) es anterior al umbral de la compañía ('Cálculos a partir de',
+        # aso_calculos_mes/aso_calculos_anio en res.company) es historial migrado: no
+        # generó un cargo real (ver _periodo_habilitado_para_calculo) y no debe cambiar
+        # nunca, incluso si algo escribe/borra sin pasar por el ORM. Los flags manuales
+        # force_invoiced/force_paid NO se usan aquí: en la práctica casi nunca se marcan
+        # a mano, así que basarse solo en ellos deja sin protección a todo el historial
+        # importado por CSV/Excel antes de que existiera el umbral. Los registros
+        # iniciales (es_inicial, sin periodo_date) no aplican: no son "lecturas
+        # migradas", son la base de arranque del contador. Si la compañía no tiene
+        # umbral configurado, no se bloquea nada (igual que en Python).
+        self._cr.execute("""
+            CREATE OR REPLACE FUNCTION asovec_contador_lines_protect_migrada()
+            RETURNS trigger AS $$
+            DECLARE
+                v_row asovec_contador_lines;
+                v_mes_umbral integer;
+                v_anio_umbral integer;
+                v_umbral date;
+            BEGIN
+                v_row := OLD;
+
+                IF v_row.periodo_date IS NULL THEN
+                    IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+                END IF;
+
+                SELECT NULLIF(company.aso_calculos_mes, '')::integer, company.aso_calculos_anio
+                  INTO v_mes_umbral, v_anio_umbral
+                  FROM res_company company
+                 WHERE company.id = v_row.company_id;
+
+                IF v_mes_umbral IS NULL OR v_anio_umbral IS NULL THEN
+                    IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+                END IF;
+
+                v_umbral := make_date(v_anio_umbral, v_mes_umbral, 1);
+
+                IF v_row.periodo_date < v_umbral THEN
+                    IF TG_OP = 'DELETE' THEN
+                        RAISE EXCEPTION
+                            'No se puede eliminar la lectura (id=%): su período (%) es anterior al umbral de cálculos de la compañía (%) y es historial migrado.',
+                            v_row.id, v_row.periodo_date, v_umbral;
+                    ELSE
+                        RAISE EXCEPTION
+                            'No se puede modificar la lectura (id=%): su período (%) es anterior al umbral de cálculos de la compañía (%) y es historial migrado.',
+                            v_row.id, v_row.periodo_date, v_umbral;
+                    END IF;
+                END IF;
+
+                IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+        self._cr.execute("""
+            DROP TRIGGER IF EXISTS asovec_contador_lines_protect_migrada_trg
+            ON asovec_contador_lines
+        """)
+        self._cr.execute("""
+            CREATE TRIGGER asovec_contador_lines_protect_migrada_trg
+            BEFORE UPDATE OR DELETE ON asovec_contador_lines
+            FOR EACH ROW EXECUTE FUNCTION asovec_contador_lines_protect_migrada()
+        """)
+
     @api.depends("invoice_line_ids.move_id.state", "invoice_line_ids.move_id.payment_state", "force_invoiced", "force_paid")
     def _compute_invoice_info(self):
         for rec in self:
@@ -837,20 +901,26 @@ class ContadorLine(models.Model):
         if move:
             move.unlink()
 
-    def _periodo_habilitado_para_calculo(self):
-        """Compara el período (mes/año) de esta lectura contra el umbral configurado en
-        la compañía ('Cálculos a partir de'). Si el período es anterior al umbral, no se
-        debe generar cargo (se está cargando historial de meses anteriores)."""
-        self.ensure_one()
-        company = self.company_id or self.env.company
+    @api.model
+    def _periodo_esta_habilitado(self, company, mes, anio):
+        """Compara un período (mes/año) contra el umbral configurado en la compañía
+        ('Cálculos a partir de'). Si el período es anterior al umbral, se considera
+        historial (no debe generar cargo, y la lectura de ese período no debe poder
+        modificarse ni eliminarse: ver también el trigger de protección en `init()`)."""
         mes_umbral = company.aso_calculos_mes
         anio_umbral = company.aso_calculos_anio
-        if not mes_umbral or not anio_umbral:
-            return True
-        if not self.periodo_date:
+        if not mes_umbral or not anio_umbral or not mes or not anio:
             return True
         umbral = date(int(anio_umbral), int(mes_umbral), 1)
-        return self.periodo_date >= umbral
+        periodo = date(int(anio), int(mes), 1)
+        return periodo >= umbral
+
+    def _periodo_habilitado_para_calculo(self):
+        self.ensure_one()
+        if not self.periodo_date:
+            return True
+        company = self.company_id or self.env.company
+        return self._periodo_esta_habilitado(company, self.mes, self.anio)
 
     def _generar_cargo_mensual(self):
         """Crea (o recrea, si estaba en borrador) el cargo correspondiente a esta lectura."""

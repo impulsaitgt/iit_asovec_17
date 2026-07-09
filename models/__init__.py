@@ -7,6 +7,7 @@ from . import proyecto_cobro_mensual
 from . import account_journal
 from . import cobro_consulta_wizard
 from . import tipo_servicio_aso
+from . import account_move
 from . import account_move_line
 from . import residencia_report
 from . import residencia_recibo_wizard

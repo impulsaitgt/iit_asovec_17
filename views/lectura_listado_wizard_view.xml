@@ -29,7 +29,8 @@
       <field name="arch" type="xml">
         <tree string="Residencias" create="0" edit="0" delete="0" default_order="residencia_codigo">
           <button name="action_ir_a_registrar" type="object"
-              string="💧 Registrar" class="btn-primary" icon="fa-tint" />
+              string="💧 Registrar" class="btn-primary" icon="fa-tint"
+              invisible="not periodo_habilitado" />
           <field name="residencia_id" string="Residencia" />
           <field name="contador_id" />
           <field name="direccion_real" />
@@ -37,6 +38,7 @@
           <field name="lectura_anterior" />
           <field name="lectura_actual" invisible="not tiene_lectura" />
           <field name="tiene_lectura" column_invisible="1" />
+          <field name="periodo_habilitado" column_invisible="1" />
           <field name="estado_lectura" widget="badge" string="Estado"
               decoration-success="estado_lectura == 'con_lectura'"
               decoration-warning="estado_lectura == 'pendiente'" />
