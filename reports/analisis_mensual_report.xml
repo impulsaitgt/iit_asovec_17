@@ -285,6 +285,10 @@
                                         <th>Saldo</th>
                                         <th class="text-left">Estado cargo</th>
                                         <th class="text-left">Lectura</th>
+                                        <th>Lectura anterior</th>
+                                        <th>Lectura actual</th>
+                                        <th>Consumo (m³)</th>
+                                        <th>Exceso (m³)</th>
                                         <t t-foreach="servicios_nombres" t-as="servicio_nombre">
                                             <th><t t-esc="servicio_nombre" /></th>
                                         </t>
@@ -318,6 +322,22 @@
                                                     <a t-attf-href="/report/pdf/iit_asovec.report_cargo_residencia/#{fila['line'].id}"
                                                         target="_blank">Imprimir Recibo Detallado</a>
                                                 </div>
+                                            </td>
+                                            <td>
+                                                <t t-if="fila['line'].contador_line_id" t-esc="'{:,.2f}'.format(fila['line'].lectura_anterior)" />
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="fila['line'].contador_line_id" t-esc="'{:,.2f}'.format(fila['line'].lectura_actual)" />
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="fila['line'].contador_line_id" t-esc="'{:,.2f}'.format(fila['line'].consumo)" />
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="fila['line'].contador_line_id" t-esc="'{:,.2f}'.format(fila['line'].exceso)" />
+                                                <t t-else="">—</t>
                                             </td>
                                             <t t-foreach="servicios_nombres" t-as="servicio_nombre">
                                                 <td>
