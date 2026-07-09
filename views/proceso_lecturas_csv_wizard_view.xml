@@ -14,6 +14,24 @@
               <field name="proyecto_aso_ids" widget="many2many_tags" />
             </group>
 
+            <group string="Avance de lecturas" invisible="not proyecto_aso_ids or not mes or not anio">
+              <group>
+                <field name="total_residencias" readonly="1" />
+                <field name="residencias_inactivas" readonly="1" />
+                <field name="pct_inactivas" widget="percentage" readonly="1" string="% Inactivas" />
+              </group>
+              <group>
+                <field name="residencias_con_lectura" readonly="1" />
+                <field name="pct_con_lectura" widget="percentage" readonly="1" string="% Con lectura" />
+                <field name="residencias_sin_lectura" readonly="1" />
+                <field name="pct_sin_lectura" widget="percentage" readonly="1" string="% Sin lectura" />
+              </group>
+              <group>
+                <field name="residencias_cargo_generado" readonly="1" />
+                <field name="pct_cargo_generado" widget="percentage" readonly="1" string="% Cargos generados" />
+              </group>
+            </group>
+
             <group invisible="not file_data">
               <field name="file_name" invisible="1" />
               <field name="file_data"

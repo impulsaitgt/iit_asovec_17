@@ -11,6 +11,7 @@
                 <field name="convenio_principal" readonly="aso_cargo != 'Si'"/>
                 <field name="aso_cargo_otro"/>
                 <field name="convenio_otro" readonly="aso_cargo_otro != 'Si'"/>
+                <field name="diario_relacionado_id" invisible="type != 'sale'"/>
             </field>
         </field>
     </record>

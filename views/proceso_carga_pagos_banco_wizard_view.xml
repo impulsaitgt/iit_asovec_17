@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_asovec_proceso_carga_pagos_banco_wizard_form" model="ir.ui.view">
+      <field name="name">asovec.proceso_carga_pagos_banco_wizard.form</field>
+      <field name="model">asovec.proceso_carga_pagos_banco_wizard</field>
+      <field name="arch" type="xml">
+        <form string="Carga de Pagos del Banco">
+          <sheet>
+            <group>
+              <field name="archivo_filename" invisible="1" />
+              <field name="archivo"
+                filename="archivo_filename"
+                widget="binary"
+                readonly="line_ids"
+                string="Archivo CSV" />
+            </group>
+
+            <group string="Parámetros">
+              <field name="mes" readonly="line_ids" />
+              <field name="anio" readonly="line_ids" />
+              <field name="journal_ids" widget="many2many_tags" readonly="line_ids" />
+            </group>
+
+            <group>
+              <field name="state" widget="badge"
+                decoration-success="state in ('validado','completo')"
+                decoration-info="state == 'procesando'"
+                decoration-danger="state == 'con_error'" />
+              <field name="total_filas" />
+              <field name="total_generados" />
+              <field name="total_errores" />
+              <field name="total_errores_pago" invisible="total_errores_pago == 0" />
+            </group>
+
+            <div class="alert alert-danger" role="alert" invisible="total_pendientes_validar == 0">
+              <strong>
+                Pendientes <field name="total_pendientes_validar" nolabel="1" class="oe_inline" readonly="1" /> de validar
+              </strong>
+            </div>
+            <div class="alert alert-danger" role="alert" invisible="total_pendientes_pagar == 0 or total_errores &gt; 0">
+              <strong>
+                Pendientes <field name="total_pendientes_pagar" nolabel="1" class="oe_inline" readonly="1" /> de generar pago
+              </strong>
+            </div>
+            <div class="alert alert-danger" role="alert" invisible="total_errores_pago == 0">
+              <strong>
+                ¡Atención! <field name="total_errores_pago" nolabel="1" class="oe_inline" readonly="1" /> residencia(s)
+                fallaron al GENERAR/CONFIRMAR el pago (por ejemplo, un rechazo de Hacienda). Revísalas en
+                la pestaña "Filas con error" (columna Etapa = "Generación de pago") y corrígelas subiendo
+                un CSV nuevo que cuadre solo con esas residencias.
+              </strong>
+            </div>
+
+            <group invisible="not log">
+              <field name="log" nolabel="1" readonly="1" />
+            </group>
+
+            <notebook invisible="not line_ids">
+              <page string="Filas con error" name="filas_error" invisible="total_errores == 0">
+                <field name="line_ids" domain="[('error', '!=', False)]">
+                  <tree editable="false" decoration-danger="error">
+                    <field name="correlativo" />
+                    <field name="residencia_code" />
+                    <field name="nombre" />
+                    <field name="cuota" />
+                    <field name="saldo" />
+                    <field name="saldo_mes_calculado" />
+                    <field name="saldo_anterior_calculado" />
+                    <field name="etapa_error" />
+                    <field name="error" />
+                  </tree>
+                </field>
+              </page>
+              <page string="Todas las filas" name="todas_las_filas">
+                <field name="line_ids">
+                  <tree editable="false" decoration-danger="error" decoration-muted="procesado and not error">
+                    <field name="correlativo" />
+                    <field name="residencia_code" />
+                    <field name="residencia_id" />
+                    <field name="nombre" />
+                    <field name="cuota" />
+                    <field name="saldo" />
+                    <field name="saldo_mes_calculado" />
+                    <field name="saldo_anterior_calculado" />
+                    <field name="fecha" />
+                    <field name="nombre_agencia" />
+                    <field name="validado" />
+                    <field name="procesado" />
+                    <field name="etapa_error" />
+                    <field name="error" />
+                    <field name="payment_ids" widget="many2many_tags" />
+                  </tree>
+                </field>
+              </page>
+            </notebook>
+          </sheet>
+
+          <footer>
+            <button name="action_validar" type="object" string="Validar"
+              class="btn-primary" invisible="state not in ('draft','con_error')" />
+            <button name="action_generar_pagos" type="object" string="Generar Pagos"
+              class="btn-primary" invisible="state not in ('validado','procesando')" />
+            <button string="Cerrar" special="cancel" class="btn-secondary" />
+          </footer>
+        </form>
+      </field>
+    </record>
+
+    <record id="action_proceso_carga_pagos_banco_wizard" model="ir.actions.act_window">
+      <field name="name">Carga de Pagos del Banco</field>
+      <field name="res_model">asovec.proceso_carga_pagos_banco_wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+    </record>
+
+  </data>
+</odoo>

@@ -54,6 +54,7 @@ class LecturaOperadorWizard(models.TransientModel):
 
     foto = fields.Binary(string="Foto")
     foto_filename = fields.Char(string="Nombre foto")
+    observaciones = fields.Text(string="Observaciones")
 
     def _limpiar_preview(self):
         for rec in self:
@@ -115,6 +116,7 @@ class LecturaOperadorWizard(models.TransientModel):
         self.line_id = False
         self.foto = False
         self.foto_filename = False
+        self.observaciones = False
 
         next_mes, next_anio = Line._next_period_for_contador(self.contador_id.id)
         self.mes = next_mes
@@ -168,6 +170,7 @@ class LecturaOperadorWizard(models.TransientModel):
         self.lectura = last.lectura
         self.foto = last.foto
         self.foto_filename = last.foto_filename
+        self.observaciones = last.observaciones
         self._recalcular_preview()
 
     def action_volver_nueva(self):
@@ -213,6 +216,7 @@ class LecturaOperadorWizard(models.TransientModel):
                 "lectura": self.lectura,
                 "foto": self.foto,
                 "foto_filename": self.foto_filename,
+                "observaciones": self.observaciones,
             })
         else:
             self.env["asovec.contador.lines"].create({
@@ -223,6 +227,7 @@ class LecturaOperadorWizard(models.TransientModel):
                 "lectura": self.lectura,
                 "foto": self.foto,
                 "foto_filename": self.foto_filename,
+                "observaciones": self.observaciones,
             })
 
         # Si se llegó aquí desde el Listado de Residencias por Proyecto, se vuelve a

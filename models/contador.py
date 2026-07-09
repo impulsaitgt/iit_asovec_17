@@ -231,6 +231,7 @@ class ContadorLine(models.Model):
 
     foto = fields.Binary(string="Foto", attachment=True)
     foto_filename = fields.Char(string="Nombre foto")  # opcional pero recomendado
+    observaciones = fields.Text(string="Observaciones")
 
     # -------------------------
     # Facturación / pago (badges estilo Odoo)

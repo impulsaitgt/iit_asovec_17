@@ -32,3 +32,5 @@ accesos_lectura_listado_wizard_administrador,Acceso a Listado de Residencias wiz
 accesos_lectura_listado_wizard_line_administrador,Acceso a Listado de Residencias wizard Linea,model_asovec_lectura_listado_wizard_line,asovec_group_administrador,1,1,1,1
 accesos_lectura_listado_wizard_operador,Acceso a Listado de Residencias (Operador de Lecturas),model_asovec_lectura_listado_wizard,asovec_group_operador_lecturas,1,1,1,1
 accesos_lectura_listado_wizard_line_operador,Acceso a Listado de Residencias Linea (Operador de Lecturas),model_asovec_lectura_listado_wizard_line,asovec_group_operador_lecturas,1,1,1,1
+accesos_proceso_carga_pagos_banco_wizard,Acceso a Proceso Carga Pagos Banco wizard,model_asovec_proceso_carga_pagos_banco_wizard,asovec_group_administrador,1,1,1,1
+accesos_proceso_carga_pagos_banco_wizard_line,Acceso a Proceso Carga Pagos Banco wizard Linea,model_asovec_proceso_carga_pagos_banco_wizard_line,asovec_group_administrador,1,1,1,1

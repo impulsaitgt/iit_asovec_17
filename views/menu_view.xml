@@ -146,6 +146,8 @@
         parent="procesos_menu" action="proceso_estado_cuenta_csv_wizard_action" groups="asovec_group_administrador" />
     <menuitem name="Cargar Deudas/Facturas Anteriores" id="proceso_carga_deudas_opcion"
         parent="procesos_menu" action="action_proceso_carga_deudas_wizard" groups="asovec_group_administrador" />
+    <menuitem name="Carga de pagos del Banco" id="proceso_carga_pagos_banco_opcion"
+        parent="procesos_menu" action="action_proceso_carga_pagos_banco_wizard" groups="asovec_group_administrador" />
 
     <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="60" />
     <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"

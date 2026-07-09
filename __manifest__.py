@@ -29,6 +29,8 @@
         'views/proceso_estado_cuenta_csv_wizard_view.xml',
         'views/proceso_estado_lecturas_excel_wizard_view.xml',
         'views/proceso_carga_deudas_wizard_view.xml',
+        'views/proceso_carga_pagos_banco_wizard_view.xml',
+        'views/account_payment_view.xml',
         'views/proceso_analisis_mensual_wizard_view.xml',
         'views/proceso_lecturas_csv_wizard_view.xml',
         'views/lectura_listado_wizard_view.xml',
