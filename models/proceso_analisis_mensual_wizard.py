@@ -128,13 +128,16 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
         worksheet = workbook.add_worksheet(nombre_hoja)
         servicios_nombres = datos["servicios_nombres"]
 
-        columnas_fijas = 7  # Residencia, Cliente, Total, Pagado, Saldo, Estado cargo, Lectura
+        # Residencia, Cliente, Total, Pagado, Saldo, Estado cargo, Lectura, Lectura
+        # anterior, Lectura actual, Consumo (m³), Exceso (m³)
+        columnas_fijas = 11
         col_servicios = 3  # deja la columna 2 vacía como separación con "Resumen del proyecto"
         worksheet.set_column(0, 1, 28)
         worksheet.set_column(2, 2, 14)
         worksheet.set_column(3, 3, 26)
         worksheet.set_column(4, 4, 14)
         worksheet.set_column(5, 6, 16)
+        worksheet.set_column(7, 10, 14)
         if servicios_nombres:
             worksheet.set_column(columnas_fijas, columnas_fijas + len(servicios_nombres) - 1, 16)
 
@@ -159,7 +162,10 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
         worksheet.write(row, 0, "Detalle de residencias", formatos["seccion"])
         row += 1
 
-        encabezados = ["Residencia", "Cliente", "Total", "Pagado", "Saldo", "Estado cargo", "Lectura"] + servicios_nombres
+        encabezados = [
+            "Residencia", "Cliente", "Total", "Pagado", "Saldo", "Estado cargo", "Lectura",
+            "Lectura anterior", "Lectura actual", "Consumo (m³)", "Exceso (m³)",
+        ] + servicios_nombres
         for col, texto in enumerate(encabezados):
             worksheet.write(row, col, texto, formatos["header"])
         header_row = row
@@ -174,6 +180,11 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
             worksheet.write(row, 4, line.amount_balance, formatos["dinero"])
             worksheet.write(row, 5, line.move_state or "Sin cargo")
             worksheet.write(row, 6, line.con_lectura or "")
+            if line.contador_line_id:
+                worksheet.write(row, 7, line.lectura_anterior, formatos["dinero"])
+                worksheet.write(row, 8, line.lectura_actual, formatos["dinero"])
+                worksheet.write(row, 9, line.consumo, formatos["dinero"])
+                worksheet.write(row, 10, line.exceso, formatos["dinero"])
             for i, nombre in enumerate(servicios_nombres):
                 valor = fila["servicios"].get(nombre)
                 if valor is not None:

@@ -793,6 +793,7 @@ class ProyectoCobroMensualLine(models.Model):
     )
     lectura_anterior = fields.Float(related="contador_line_id.lectura_anterior", string="Lectura anterior", readonly=True)
     lectura_actual = fields.Float(related="contador_line_id.lectura", string="Lectura actual", readonly=True)
+    consumo = fields.Float(related="contador_line_id.consumo", string="Consumo (m³)", readonly=True)
     exceso = fields.Float(
         string="Exceso (m³)",
         related="contador_line_id.metros_extras",
