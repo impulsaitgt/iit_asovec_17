@@ -191,8 +191,9 @@ class ProyectoCobroMensual(models.Model):
             rec.residencias_inactivas = len(inactivas)
             rec.residencias_cargo_generado = len(cargo_generado)
 
-            rec.pct_con_lectura = (len(con_lectura) / total) if total else 0.0
-            rec.pct_sin_lectura = (len(sin_lectura) / total) if total else 0.0
+            total_activas = len(activas)
+            rec.pct_con_lectura = (len(con_lectura) / total_activas) if total_activas else 0.0
+            rec.pct_sin_lectura = (len(sin_lectura) / total_activas) if total_activas else 0.0
             rec.pct_inactivas = (len(inactivas) / total) if total else 0.0
             rec.pct_cargo_generado = (len(cargo_generado) / total) if total else 0.0
 
@@ -819,6 +820,7 @@ class ProyectoCobroMensualLine(models.Model):
     )
     foto = fields.Binary(related="contador_line_id.foto", string="Foto", readonly=True)
     foto_filename = fields.Char(related="contador_line_id.foto_filename", string="Nombre foto", readonly=True)
+    observaciones = fields.Text(related="contador_line_id.observaciones", string="Observaciones", readonly=True)
 
     @api.model_create_multi
     def create(self, vals_list):

@@ -117,6 +117,34 @@
                     .badge-info { background: #0277bd; }
                     .badge-warning { background: #b8860b; }
 
+                    .lectura-cell { position: relative; }
+                    .badge.lectura-clickable { cursor: pointer; }
+                    .recibo-menu {
+                        display: none;
+                        position: absolute;
+                        z-index: 50;
+                        top: 100%;
+                        left: 0;
+                        margin-top: 4px;
+                        background: #ffffff;
+                        border-radius: 6px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+                        padding: 4px 0;
+                        min-width: 190px;
+                        text-align: left;
+                        white-space: nowrap;
+                    }
+                    .recibo-menu.open { display: block; }
+                    .recibo-menu a {
+                        display: block;
+                        padding: 7px 14px;
+                        font-size: 12px;
+                        color: #2b2b2b;
+                        text-decoration: none;
+                    }
+                    .recibo-menu a:hover { background: #f0f7f7; }
+                    .recibo-menu .disabled { color: #aaa; cursor: default; padding: 7px 14px; font-size: 12px; }
+
                     /* Esta página es principalmente para verse en pantalla (pestañas
                        interactivas). Si se exporta/imprime a PDF, el botón "Print" que
                        Odoo agrega automáticamente no ejecuta JavaScript, así que aquí se
@@ -126,6 +154,7 @@
                         body { background: #fff; padding: 0; }
                         .tabs { display: none; }
                         .tab-content { display: block !important; page-break-after: always; box-shadow: none; }
+                        .recibo-menu { display: none !important; }
                     }
                 </style>
             </head>
@@ -275,11 +304,20 @@
                                                     <t t-esc="mstate or 'Sin cargo'" />
                                                 </span>
                                             </td>
-                                            <td class="text-left">
+                                            <td class="text-left lectura-cell">
                                                 <t t-set="cl" t-value="fila['line'].con_lectura" />
-                                                <span t-attf-class="badge #{cl == 'Lectura Valida' and 'badge-success' or (cl == 'Inactivo' and 'badge-info' or 'badge-danger')}">
+                                                <span t-attf-class="badge lectura-clickable #{cl == 'Lectura Valida' and 'badge-success' or (cl == 'Inactivo' and 'badge-info' or 'badge-danger')}"
+                                                    t-attf-onclick="toggleReciboMenu(event, 'recibo-menu-#{fila['line'].id}')">
                                                     <t t-esc="cl" />
                                                 </span>
+                                                <div t-attf-id="recibo-menu-#{fila['line'].id}" class="recibo-menu">
+                                                    <a t-if="fila['line'].contador_line_id"
+                                                        t-attf-href="/report/pdf/iit_asovec.report_recibo_residencia_mensual/#{fila['line'].contador_line_id.id}"
+                                                        target="_blank">Imprimir Recibo</a>
+                                                    <span t-else="" class="disabled">Imprimir Recibo (sin lectura)</span>
+                                                    <a t-attf-href="/report/pdf/iit_asovec.report_cargo_residencia/#{fila['line'].id}"
+                                                        target="_blank">Imprimir Recibo Detallado</a>
+                                                </div>
                                             </td>
                                             <t t-foreach="servicios_nombres" t-as="servicio_nombre">
                                                 <td>
@@ -304,6 +342,21 @@
                         document.getElementById(id).style.display = 'block';
                         evt.currentTarget.classList.add('active');
                     }
+
+                    function toggleReciboMenu(evt, id) {
+                        evt.stopPropagation();
+                        var menus = document.getElementsByClassName('recibo-menu');
+                        var target = document.getElementById(id);
+                        for (var i = 0; i &lt; menus.length; i++) {
+                            if (menus[i] !== target) { menus[i].classList.remove('open'); }
+                        }
+                        target.classList.toggle('open');
+                    }
+
+                    document.addEventListener('click', function () {
+                        var menus = document.getElementsByClassName('recibo-menu');
+                        for (var i = 0; i &lt; menus.length; i++) { menus[i].classList.remove('open'); }
+                    });
                 </script>
             </body>
         </html>

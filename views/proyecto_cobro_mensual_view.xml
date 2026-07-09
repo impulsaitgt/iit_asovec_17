@@ -142,6 +142,7 @@
                                 <tree create="0" edit="0" delete="0">
                                     <field name="residencia_id"
                                         options="{'no_create': True, 'no_open': False}" />
+                                    <field name="cliente_id" string="Residente" />
 
                                     <field name="move_id" string="Cargo"/>
 
@@ -188,6 +189,8 @@
                                     <group>
                                         <field name="residencia_id" readonly="1"
                                             options="{'no_create': True, 'no_open': False}" />
+                                        <field name="cliente_id" string="Residente" readonly="1"
+                                            options="{'no_create': True, 'no_open': False}" />
                                         <field name="move_id" readonly="1"
                                             options="{'no_create': True, 'no_open': False}" />
                                         <field name="move_state" widget="badge"
@@ -225,6 +228,7 @@
                                             filename="foto_filename"
                                             invisible="pago_extra == 0"
                                             string="Foto de la lectura" />
+                                        <field name="observaciones" readonly="1" />
                                     </group>
                                 </form>
                             </field>

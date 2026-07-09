@@ -95,8 +95,11 @@
 
                     <field name="foto" widget="image"
                         options="{'size': [300, 300]}"
-                        filename="foto_filename"
-                        invisible="pago_extra == 0" />
+                        filename="foto_filename" />
+
+                    <group invisible="not contador_id">
+                        <field name="observaciones" placeholder="Observaciones sobre esta lectura..." />
+                    </group>
 
                     <group invisible="not residencia_id" string="Datos de la residencia">
                         <group>
