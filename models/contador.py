@@ -288,17 +288,24 @@ class ContadorLine(models.Model):
     )
 
     def init(self):
-        # Defensa adicional a nivel de base de datos: una lectura mensual cuyo período
-        # (periodo_date) es anterior al umbral de la compañía ('Cálculos a partir de',
-        # aso_calculos_mes/aso_calculos_anio en res.company) es historial migrado: no
-        # generó un cargo real (ver _periodo_habilitado_para_calculo) y no debe cambiar
-        # nunca, incluso si algo escribe/borra sin pasar por el ORM. Los flags manuales
-        # force_invoiced/force_paid NO se usan aquí: en la práctica casi nunca se marcan
-        # a mano, así que basarse solo en ellos deja sin protección a todo el historial
-        # importado por CSV/Excel antes de que existiera el umbral. Los registros
-        # iniciales (es_inicial, sin periodo_date) no aplican: no son "lecturas
-        # migradas", son la base de arranque del contador. Si la compañía no tiene
-        # umbral configurado, no se bloquea nada (igual que en Python).
+        # Defensa adicional a nivel de base de datos: bloquea UPDATE/DELETE, sin
+        # excepción, incluso si algo escribe/borra sin pasar por el ORM, para dos
+        # casos que nunca deben cambiar una vez guardados:
+        #   1) Registros iniciales (es_inicial = True) de un contador que YA tiene al
+        #      menos una lectura mensual registrada: esas lecturas mensuales ya
+        #      calcularon y guardaron su consumo/cargo a partir del valor del inicial,
+        #      así que corregirlo después dejaría inconsistente todo ese historial. Un
+        #      contador nuevo (sin lecturas mensuales todavía) sí puede corregir su
+        #      inicial libremente, por ejemplo si se equivocó al capturarlo.
+        #   2) Lecturas mensuales cuyo período (periodo_date) es anterior al umbral
+        #      de la compañía ('Cálculos a partir de', aso_calculos_mes/
+        #      aso_calculos_anio en res.company): no generaron un cargo real (ver
+        #      _periodo_habilitado_para_calculo), es historial migrado. Los flags
+        #      manuales force_invoiced/force_paid NO se usan aquí: en la práctica casi
+        #      nunca se marcan a mano, así que basarse solo en ellos deja sin
+        #      protección a todo el historial importado por CSV/Excel antes de que
+        #      existiera el umbral. Si la compañía no tiene umbral configurado, este
+        #      caso no bloquea nada (igual que en Python).
         self._cr.execute("""
             CREATE OR REPLACE FUNCTION asovec_contador_lines_protect_migrada()
             RETURNS trigger AS $$
@@ -309,6 +316,25 @@ class ContadorLine(models.Model):
                 v_umbral date;
             BEGIN
                 v_row := OLD;
+
+                IF v_row.es_inicial IS TRUE THEN
+                    IF EXISTS (
+                        SELECT 1 FROM asovec_contador_lines
+                         WHERE contador_id = v_row.contador_id
+                           AND es_inicial = FALSE
+                    ) THEN
+                        IF TG_OP = 'DELETE' THEN
+                            RAISE EXCEPTION
+                                'No se puede eliminar la lectura (id=%): es el registro inicial del contador y ya existen lecturas mensuales registradas a partir de él.',
+                                v_row.id;
+                        ELSE
+                            RAISE EXCEPTION
+                                'No se puede modificar la lectura (id=%): es el registro inicial del contador y ya existen lecturas mensuales registradas a partir de él.',
+                                v_row.id;
+                        END IF;
+                    END IF;
+                    IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+                END IF;
 
                 IF v_row.periodo_date IS NULL THEN
                     IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
