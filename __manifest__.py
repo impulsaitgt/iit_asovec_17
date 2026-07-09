@@ -10,6 +10,9 @@
     'depends': [
         'base', 'product', 'account'
     ],
+    'external_dependencies': {
+        'python': ['xlsxwriter'],
+    },
     'data': [
         'security/asovec_security.xml',
         'security/ir.model.access.csv',
