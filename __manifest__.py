@@ -6,7 +6,7 @@
     """,
     'author':'Alexander Paiz',
     'category': 'General',
-    'version' : '1.0.2',
+    'version' : '1.0.3',
     'depends': [
         'base', 'product', 'account'
     ],
@@ -32,6 +32,7 @@
         'views/proceso_analisis_mensual_wizard_view.xml',
         'views/proceso_lecturas_csv_wizard_view.xml',
         'views/lectura_listado_wizard_view.xml',
+        'views/account_move_view.xml',
         'views/menu_view.xml',
         'reports/estado_cuenta_report.xml',
         'reports/estado_cuenta_residencia_lecturas_report.xml',

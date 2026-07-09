@@ -508,6 +508,7 @@ class ProyectoCobroMensual(models.Model):
             "company_id": self.company_id.id,
             "journal_id": journal.id,
             "partner_id": residencia.cliente_id.id,
+            "residencia_id": residencia.id,
             "invoice_date": fields.Date.context_today(self),
             "invoice_origin": self.name or "",
             "ref": f"{self.name or ''} - {residencia.display_name}",
