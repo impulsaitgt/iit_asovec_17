@@ -69,13 +69,13 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
             row += 1
         return row
 
-    def _escribir_tabla_servicios(self, worksheet, row, resumen, servicios_nombres, fmt_header, fmt_money):
-        worksheet.write(row, 0, "Servicio", fmt_header)
-        worksheet.write(row, 1, "Monto", fmt_header)
+    def _escribir_tabla_servicios(self, worksheet, row, resumen, servicios_nombres, fmt_header, fmt_money, col=0):
+        worksheet.write(row, col, "Servicio", fmt_header)
+        worksheet.write(row, col + 1, "Monto", fmt_header)
         row += 1
         for nombre in servicios_nombres:
-            worksheet.write(row, 0, nombre)
-            worksheet.write(row, 1, resumen["por_servicio"].get(nombre, 0.0), fmt_money)
+            worksheet.write(row, col, nombre)
+            worksheet.write(row, col + 1, resumen["por_servicio"].get(nombre, 0.0), fmt_money)
             row += 1
         return row
 
@@ -129,8 +129,11 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
         servicios_nombres = datos["servicios_nombres"]
 
         columnas_fijas = 7  # Residencia, Cliente, Total, Pagado, Saldo, Estado cargo, Lectura
+        col_servicios = 3  # deja la columna 2 vacía como separación con "Resumen del proyecto"
         worksheet.set_column(0, 1, 28)
-        worksheet.set_column(2, 4, 14)
+        worksheet.set_column(2, 2, 14)
+        worksheet.set_column(3, 3, 26)
+        worksheet.set_column(4, 4, 14)
         worksheet.set_column(5, 6, 16)
         if servicios_nombres:
             worksheet.set_column(columnas_fijas, columnas_fijas + len(servicios_nombres) - 1, 16)
@@ -138,21 +141,21 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
         worksheet.write(0, 0, proy_data["proyecto"].name, formatos["titulo"])
         worksheet.write(1, 0, "%s %s" % (datos["mes_label"], datos["anio"]), formatos["subtitulo"])
 
-        row = 3
-        worksheet.write(row, 0, "Resumen del proyecto", formatos["seccion"])
-        row += 1
-        row = self._escribir_fila_resumen(
-            worksheet, row, proy_data["resumen"], formatos["label"], formatos["entero"], formatos["dinero"]
+        # "Resumen del proyecto" y "Totales por servicio" van lado a lado (en vez de uno
+        # debajo del otro) para que el encabezado de la hoja no quede tan largo.
+        row_titulos = 3
+        worksheet.write(row_titulos, 0, "Resumen del proyecto", formatos["seccion"])
+        fin_resumen = self._escribir_fila_resumen(
+            worksheet, row_titulos + 1, proy_data["resumen"], formatos["label"], formatos["entero"], formatos["dinero"]
         )
 
-        row += 1
-        worksheet.write(row, 0, "Totales por servicio", formatos["seccion"])
-        row += 1
-        row = self._escribir_tabla_servicios(
-            worksheet, row, proy_data["resumen"], servicios_nombres, formatos["header"], formatos["dinero"]
+        worksheet.write(row_titulos, col_servicios, "Totales por servicio", formatos["seccion"])
+        fin_servicios = self._escribir_tabla_servicios(
+            worksheet, row_titulos + 1, proy_data["resumen"], servicios_nombres,
+            formatos["header"], formatos["dinero"], col=col_servicios,
         )
 
-        row += 1
+        row = max(fin_resumen, fin_servicios) + 1
         worksheet.write(row, 0, "Detalle de residencias", formatos["seccion"])
         row += 1
 
