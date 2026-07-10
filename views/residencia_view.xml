@@ -99,6 +99,9 @@
             <tree string="Residencias">
                 <field name="name" />
                 <field name="direccion_real" string="Dirección" />
+                <field name="sector" />
+                <field name="calle" />
+                <field name="no_casa" />
                 <field name="detalle" />
                 <field name="cliente_id" />
                 <field name="proyecto_aso_id" />
@@ -124,6 +127,9 @@
                 <field name="direccion_real" string="Dirección" />
                 <field name="cliente_id" />
                 <field name="proyecto_aso_id" />
+                <field name="sector" />
+                <field name="calle" />
+                <field name="no_casa" string="No. Casa" />
                 <separator />
                 <filter string="Activos" name="son_activos"
                     domain="[('activo','!=',False)]" />
@@ -161,6 +167,10 @@
                         context="{'group_by':'proyecto_aso_id'}" />
                     <filter string="Contacto" name="group_contacto"
                         context="{'group_by':'cliente_id'}" />
+                    <filter string="Sector" name="group_sector"
+                        context="{'group_by':'sector'}" />
+                    <filter string="Calle" name="group_calle"
+                        context="{'group_by':'calle'}" />
                     <filter string="Activo" name="group_activo"
                         context="{'group_by':'activo'}" />
                     <filter string="Metro base propio" name="group_metros_especiales"

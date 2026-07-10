@@ -879,7 +879,7 @@ class ProyectoCobroMensualLine(models.Model):
             "Canon base", "Pago extra", "Pago total (agua)",
         ]
         header += [s.name for s in servicios]
-        header += ["Total cargo", "Estado cargo", "Estado de pago"]
+        header += ["Total cargo", "Estado cargo", "Estado de pago", "Observaciones", "Con Foto"]
         return header
 
     @api.model
@@ -915,7 +915,11 @@ class ProyectoCobroMensualLine(models.Model):
                 importe = sline.price_subtotal if sline else 0.0
             row.append(fmt2(importe))
 
-        row += [fmt2(amount_total), move_state or "", payment_state or ""]
+        row += [
+            fmt2(amount_total), move_state or "", payment_state or "",
+            lectura.observaciones or "" if lectura else "",
+            "Con Foto" if (lectura and lectura.foto) else "",
+        ]
         return row
 
     @api.model

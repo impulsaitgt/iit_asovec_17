@@ -108,10 +108,12 @@
                     table.tabla-datos th.text-left { text-align: left; }
                     table.tabla-datos td { padding: 6px 10px; text-align: right; border-bottom: 1px solid #eee; white-space: nowrap; }
                     table.tabla-datos td.text-left { text-align: left; }
+                    table.tabla-datos td.obs-cell { white-space: normal; max-width: 240px; }
                     table.tabla-datos tbody tr:nth-child(even) { background: #fafafa; }
                     table.tabla-datos tbody tr:hover { background: #f0f7f7; }
 
                     .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; color: #fff; }
+                    .badge-link { text-decoration: none; cursor: pointer; }
                     .badge-success { background: #2e7d32; }
                     .badge-danger { background: #c62828; }
                     .badge-info { background: #0277bd; }
@@ -292,6 +294,8 @@
                                         <t t-foreach="servicios_nombres" t-as="servicio_nombre">
                                             <th><t t-esc="servicio_nombre" /></th>
                                         </t>
+                                        <th class="text-left">Observaciones</th>
+                                        <th class="text-left">Con Foto</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -304,9 +308,14 @@
                                             <td><t t-esc="'{:,.2f}'.format(fila['line'].amount_balance)" /></td>
                                             <td class="text-left">
                                                 <t t-set="mstate" t-value="fila['line'].move_state" />
-                                                <span t-attf-class="badge #{mstate == 'posted' and 'badge-success' or (mstate == 'draft' and 'badge-warning' or 'badge-danger')}">
-                                                    <t t-esc="mstate or 'Sin cargo'" />
-                                                </span>
+                                                <a t-if="fila['line'].move_id"
+                                                    t-attf-href="/web#id=#{fila['line'].move_id.id}&amp;model=account.move&amp;view_type=form"
+                                                    target="_blank" class="badge-link" title="Abrir cargo">
+                                                    <span t-attf-class="badge #{mstate == 'posted' and 'badge-success' or (mstate == 'draft' and 'badge-warning' or 'badge-danger')}">
+                                                        <t t-esc="mstate" />
+                                                    </span>
+                                                </a>
+                                                <span t-else="" class="badge badge-danger">Sin cargo</span>
                                             </td>
                                             <td class="text-left lectura-cell">
                                                 <t t-set="cl" t-value="fila['line'].con_lectura" />
@@ -315,6 +324,9 @@
                                                     <t t-esc="cl" />
                                                 </span>
                                                 <div t-attf-id="recibo-menu-#{fila['line'].id}" class="recibo-menu">
+                                                    <a t-if="fila['line'].move_state == 'draft' and fila['line'].contador_line_id"
+                                                        t-attf-href="/web#id=#{fila['line'].contador_line_id.id}&amp;model=asovec.contador.lines&amp;view_type=form"
+                                                        target="_blank">Revisar lectura</a>
                                                     <a t-if="fila['line'].contador_line_id"
                                                         t-attf-href="/report/pdf/iit_asovec.report_recibo_residencia_mensual/#{fila['line'].contador_line_id.id}"
                                                         target="_blank">Imprimir Recibo</a>
@@ -345,6 +357,12 @@
                                                     <t t-else="">—</t>
                                                 </td>
                                             </t>
+                                            <td class="text-left obs-cell"><t t-esc="fila['line'].observaciones or ''" /></td>
+                                            <td class="text-left">
+                                                <a t-if="fila['line'].foto"
+                                                    t-attf-href="/web/content/asovec.proyecto_cobro_mensual_line/#{fila['line'].id}/foto?download=true"
+                                                    target="_blank">Con Foto</a>
+                                            </td>
                                         </tr>
                                     </t>
                                 </tbody>

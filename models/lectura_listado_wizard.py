@@ -134,10 +134,11 @@ class LecturaListadoWizardLine(models.TransientModel):
     # Ordenar por "residencia_id" directamente ordenaría por el ID interno del
     # registro relacionado (su orden de creación), no por su código/nombre. Por eso
     # se usa este campo de código propio, guardado, para el orden por defecto.
-    _order = "residencia_codigo"
+    _order = "sector, residencia_codigo"
 
     residencia_id = fields.Many2one("asovec.residencia", string="Residencia", readonly=True)
     residencia_codigo = fields.Char(related="residencia_id.name", string="Código", store=True, readonly=True)
+    sector = fields.Integer(related="residencia_id.sector", string="Sector", store=True, readonly=True)
     contador_id = fields.Many2one("asovec.contador", string="Contador", readonly=True)
     direccion_real = fields.Char(related="residencia_id.direccion_real", string="Dirección", store=True, readonly=True)
     cliente_id = fields.Many2one(related="residencia_id.cliente_id", string="Contacto", store=True, readonly=True)
