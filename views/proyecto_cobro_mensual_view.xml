@@ -226,8 +226,11 @@
                                         <field name="foto" widget="image"
                                             options="{'size': [200, 200]}"
                                             filename="foto_filename"
-                                            invisible="pago_extra == 0"
                                             string="Foto de la lectura" />
+                                        <field name="foto" widget="binary"
+                                            filename="foto_filename"
+                                            invisible="not foto"
+                                            string="Descargar foto" />
                                         <field name="observaciones" readonly="1" />
                                     </group>
                                 </form>

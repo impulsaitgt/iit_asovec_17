@@ -33,3 +33,7 @@
     font-size: 24px;
     padding: 16px 32px;
 }
+
+.o_asovec_observaciones_grande textarea {
+    min-height: 150px;
+}

@@ -132,6 +132,8 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
         # anterior, Lectura actual, Consumo (m³), Exceso (m³)
         columnas_fijas = 11
         col_servicios = 3  # deja la columna 2 vacía como separación con "Resumen del proyecto"
+        col_observaciones = columnas_fijas + len(servicios_nombres)
+        col_con_foto = col_observaciones + 1
         worksheet.set_column(0, 1, 28)
         worksheet.set_column(2, 2, 14)
         worksheet.set_column(3, 3, 26)
@@ -140,6 +142,8 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
         worksheet.set_column(7, 10, 14)
         if servicios_nombres:
             worksheet.set_column(columnas_fijas, columnas_fijas + len(servicios_nombres) - 1, 16)
+        worksheet.set_column(col_observaciones, col_observaciones, 40)
+        worksheet.set_column(col_con_foto, col_con_foto, 12)
 
         worksheet.write(0, 0, proy_data["proyecto"].name, formatos["titulo"])
         worksheet.write(1, 0, "%s %s" % (datos["mes_label"], datos["anio"]), formatos["subtitulo"])
@@ -165,7 +169,7 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
         encabezados = [
             "Residencia", "Cliente", "Total", "Pagado", "Saldo", "Estado cargo", "Lectura",
             "Lectura anterior", "Lectura actual", "Consumo (m³)", "Exceso (m³)",
-        ] + servicios_nombres
+        ] + servicios_nombres + ["Observaciones", "Con Foto"]
         for col, texto in enumerate(encabezados):
             worksheet.write(row, col, texto, formatos["header"])
         header_row = row
@@ -189,6 +193,8 @@ class ProcesoAnalisisMensualWizard(models.TransientModel):
                 valor = fila["servicios"].get(nombre)
                 if valor is not None:
                     worksheet.write(row, columnas_fijas + i, valor, formatos["dinero"])
+            worksheet.write(row, col_observaciones, line.observaciones or "")
+            worksheet.write(row, col_con_foto, "Con Foto" if line.foto else "")
             row += 1
 
         worksheet.freeze_panes(header_row + 1, 2)
