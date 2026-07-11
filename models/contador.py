@@ -439,6 +439,23 @@ class ContadorLine(models.Model):
         return self.env.ref("iit_asovec.action_report_recibo_residencia_mensual").report_action(self)
 
     def action_save(self):
+        """Guarda (el form ya se guardó solo por llamar a este método de tipo
+        'object'). Si se llegó aquí desde "Corregir Lectura" en un Cobro Mensual
+        (contexto cobro_mensual_return_id), regresa a ese cobro mensual; si el
+        formulario se usó por su cuenta (por ejemplo desde el menú Lecturas), se
+        queda en el mismo registro como siempre."""
+        self.ensure_one()
+        return_id = self.env.context.get("cobro_mensual_return_id")
+        if return_id:
+            cobro = self.env["asovec.proyecto_cobro_mensual"].browse(return_id)
+            if cobro.exists():
+                return {
+                    "type": "ir.actions.act_window",
+                    "res_model": "asovec.proyecto_cobro_mensual",
+                    "view_mode": "form",
+                    "res_id": cobro.id,
+                    "target": "current",
+                }
         return True
 
     # -------------------------

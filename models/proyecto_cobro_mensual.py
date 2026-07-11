@@ -119,6 +119,30 @@ class ProyectoCobroMensual(models.Model):
     residencias_cargo_generado = fields.Integer(string="Cargos generados", compute="_compute_indicadores")
     pct_cargo_generado = fields.Float(string="% Cargos generados", compute="_compute_indicadores")
 
+    # --------------------
+    # Leyenda de progreso (para el botón Confirmar): la operación se considera
+    # completa cuando ya se generó el cargo de todas las residencias del proyecto.
+    # --------------------
+    progreso_label = fields.Char(string="Progreso", compute="_compute_progreso")
+    progreso_tipo = fields.Selection(
+        [("danger", "Danger"), ("success", "Success")],
+        string="Tipo de progreso", compute="_compute_progreso",
+    )
+
+    @api.depends("state", "total_residencias", "residencias_cargo_generado")
+    def _compute_progreso(self):
+        for rec in self:
+            faltan = (rec.total_residencias or 0) - (rec.residencias_cargo_generado or 0)
+            if rec.state == "posted":
+                rec.progreso_label = _("Completo")
+                rec.progreso_tipo = "success"
+            elif faltan > 0:
+                rec.progreso_label = _("%s Residencias sin información") % faltan
+                rec.progreso_tipo = "danger"
+            else:
+                rec.progreso_label = _("Total de Residencias con información, puedes confirmar")
+                rec.progreso_tipo = "success"
+
     def init(self):
         # Índice único parcial: solo cuando state != 'cancel'
         self._cr.execute("""
@@ -661,6 +685,12 @@ class ProyectoCobroMensual(models.Model):
             if rec.state != "draft":
                 raise UserError(_("Solo puedes confirmar desde Borrador."))
 
+            if rec.residencias_cargo_generado != rec.total_residencias:
+                raise UserError(_(
+                    "Todavía faltan %s residencias sin cargo generado. Usa "
+                    "'Completar Faltantes' antes de confirmar."
+                ) % (rec.total_residencias - rec.residencias_cargo_generado))
+
             moves = rec.line_ids.mapped("move_id").filtered(lambda m: m)
             if not moves:
                 raise UserError(_("No hay cargos relacionados para confirmar."))
@@ -792,6 +822,12 @@ class ProyectoCobroMensualLine(models.Model):
         help="Lectura de contador usada para calcular este cargo (vacío si no hubo lectura ese mes).",
     )
     lectura_anterior = fields.Float(related="contador_line_id.lectura_anterior", string="Lectura anterior", readonly=True)
+    # No editable aquí: corregir la lectura regenera el cargo (borra y recrea ESTA
+    # misma línea vía _generar_cargo_mensual -> _generar_cargo_residencia), así que
+    # escribir sobre este propio registro lo borra a mitad de su propio write() y
+    # revierte toda la transacción. Ver action_corregir_lectura: la corrección se
+    # hace desde el formulario normal de asovec.contador.lines, que sí sobrevive a
+    # la regeneración del cargo.
     lectura_actual = fields.Float(related="contador_line_id.lectura", string="Lectura actual", readonly=True)
     consumo = fields.Float(related="contador_line_id.consumo", string="Consumo (m³)", readonly=True)
     exceso = fields.Float(
@@ -856,6 +892,28 @@ class ProyectoCobroMensualLine(models.Model):
             total = line.move_id.amount_total if line.move_id else 0.0
             residual = line.move_id.amount_residual if line.move_id else 0.0
             line.amount_paid = total - residual
+
+    def action_corregir_lectura(self):
+        """Abre el formulario NORMAL de la lectura (asovec.contador.lines) para
+        corregirla ahí. No se edita 'lectura_actual' en este propio formulario porque
+        corregir la lectura regenera el cargo (borra y recrea esta misma línea), lo
+        que revertiría la transacción si se editara desde aquí (ver comentario en el
+        campo `lectura_actual`)."""
+        self.ensure_one()
+        if not self.contador_line_id:
+            raise UserError(_("Esta línea no tiene una lectura de contador asociada."))
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Corregir Lectura"),
+            "res_model": "asovec.contador.lines",
+            "view_mode": "form",
+            "res_id": self.contador_line_id.id,
+            "target": "current",
+            # Al presionar "💾 Guardar" en ese formulario, regresa aquí (ver
+            # ContadorLine.action_save). Si ese mismo formulario se abre desde otro
+            # lado (sin este contexto), Guardar se comporta como siempre.
+            "context": {"cobro_mensual_return_id": self.cobro_id.id},
+        }
 
     # --------------------
     # Formato CSV compartido (usado por el cobro mensual individual y por el proceso
