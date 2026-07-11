@@ -42,12 +42,13 @@
                         class="btn-primary"
                         invisible="state != 'draft'" />
 
-                    <!-- Botón Confirmar: solo en borrador -->
+                    <!-- Botón Confirmar: solo en borrador, y solo cuando ya se generó el
+                         cargo de todas las residencias del proyecto. -->
                     <button name="action_confirm"
                         type="object"
                         string="Confirmar"
                         class="btn-primary"
-                        invisible="state != 'draft'" />
+                        invisible="state != 'draft' or residencias_cargo_generado != total_residencias" />
 
                     <!-- Opcional: regresar a borrador -->
                     <button name="action_set_draft"
@@ -119,6 +120,10 @@
                         <h1>
                             <field name="name" readonly="1" />
                         </h1>
+                        <field name="progreso_tipo" invisible="1" />
+                        <field name="progreso_label" widget="badge" nolabel="1"
+                            decoration-danger="progreso_tipo == 'danger'"
+                            decoration-success="progreso_tipo == 'success'" />
                     </div>
 
                     <group>
@@ -146,7 +151,12 @@
 
                                     <field name="move_id" string="Cargo"/>
 
-                                    <field name="amount_total" readonly="1" />
+                                    <field name="lectura_anterior" readonly="1" />
+                                    <field name="lectura_actual" readonly="1" />
+                                    <field name="consumo" readonly="1" />
+                                    <field name="exceso" readonly="1" decoration-danger="exceso > 0" />
+
+                                    <field name="amount_total" readonly="1" decoration-danger="exceso > 0" />
                                     <field name="amount_residual" readonly="1" />
 
                                     <field name="move_state"
@@ -173,6 +183,17 @@
                                 <form string="Detalle de residencia" edit="false" create="false"
                                     delete="false">
                                     <header>
+                                        <!-- Corregir la lectura desde AQUÍ (en vez de editar
+                                             "Lectura actual" en este mismo formulario) porque
+                                             corregirla regenera el cargo, lo que borra y recrea
+                                             esta misma línea a mitad de su propio write(). El
+                                             formulario normal de asovec.contador.lines sí
+                                             sobrevive a esa regeneración. -->
+                                        <button name="action_corregir_lectura"
+                                            type="object"
+                                            string="✏️ Corregir Lectura"
+                                            class="btn-primary"
+                                            invisible="not contador_line_id" />
                                         <button name="action_imprimir_recibo"
                                             type="object"
                                             string="Imprimir Recibo"

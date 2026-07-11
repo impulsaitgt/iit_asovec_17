@@ -16,4 +16,29 @@
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
+    <!-- Todo lo que hace Administrador, salvo: no puede crear proyectos (sí
+         modificar los existentes) y no tiene acceso al menú/proceso de Migración
+         (carga de deudas/facturas anteriores). Ver ir.model.access.csv: no tiene
+         fila para model_asovec_proceso_carga_deudas_wizard(_line), así que ese
+         proceso queda bloqueado incluso si accediera por URL directa. -->
+    <record id="asovec_group_administracion_asociacion" model="res.groups">
+        <field name="name">Administración Asociacion de Vecinos</field>
+        <field name="category_id" ref="categoria_modulo_asovec"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('base.group_allow_export'))]"/>
+    </record>
+
+    <!-- Todo lo de "Administración Asociación" salvo: no puede modificar proyectos
+         (solo verlos), no puede crear residencias (solo modificar las existentes),
+         y no puede crear/modificar/eliminar tipos de servicio (solo verlos). No
+         implica ("implied_ids") al grupo Administración Asociación a propósito: en
+         Odoo los accesos de grupos implicados se SUMAN, así que heredar ese grupo
+         le devolvería los permisos completos que se le quieren quitar aquí. Por
+         eso este grupo tiene su propia fila independiente por modelo en
+         ir.model.access.csv (no hereda del anterior). -->
+    <record id="asovec_group_secretaria_asociacion" model="res.groups">
+        <field name="name">Secretaria Asociacion de Vecinos</field>
+        <field name="category_id" ref="categoria_modulo_asovec"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('base.group_allow_export'))]"/>
+    </record>
+
 </odoo>
