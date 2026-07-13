@@ -7,7 +7,7 @@ import xlsxwriter
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
-from .contador import MONTH_SELECTION, mes_anio_anterior
+from .contador import MONTH_SELECTION
 
 ALCANCE_A_ESTADO = {
     "con_lectura": "Lectura Valida",
@@ -46,11 +46,11 @@ class ProcesoEstadoLecturasExcelWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
-        mes, anio = mes_anio_anterior(fields.Date.context_today(self))
+        today = fields.Date.context_today(self)
         if "mes" in fields_list and not res.get("mes"):
-            res["mes"] = mes
+            res["mes"] = str(today.month)
         if "anio" in fields_list and not res.get("anio"):
-            res["anio"] = anio
+            res["anio"] = today.year
         return res
 
     def _get_residencias(self):
