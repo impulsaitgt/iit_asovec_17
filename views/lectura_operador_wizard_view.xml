@@ -16,7 +16,7 @@
                         string="✎ Corregir última lectura"
                         type="object"
                         class="btn-secondary btn-lg"
-                        invisible="not contador_id or es_inactivo or modo_correccion or not ultima_en_borrador" />
+                        invisible="not contador_id or es_inactivo or modo_correccion or not ultima_corregible" />
                     <button name="action_volver_nueva"
                         string="↩ Nueva lectura"
                         type="object"
@@ -35,6 +35,7 @@
                     <field name="modo_correccion" invisible="1" force_save="1" />
                     <field name="line_id" invisible="1" force_save="1" />
                     <field name="ultima_en_borrador" invisible="1" />
+                    <field name="ultima_corregible" invisible="1" />
 
                     <div class="text-center mb-4">
                         <field name="residencia_id" nolabel="1" autofocus="1"

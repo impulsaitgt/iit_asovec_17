@@ -33,9 +33,18 @@ class LecturaOperadorWizard(models.TransientModel):
     modo_correccion = fields.Boolean(string="Corrigiendo lectura existente", readonly=True)
     line_id = fields.Many2one("asovec.contador.lines", string="Lectura a corregir", readonly=True)
 
-    # Controla si se muestra el botón "Corregir última lectura": solo si existe una
-    # lectura mensual y su cargo todavía está en borrador (no posteado).
+    # Controla si se bloquea "Guardar" una lectura NUEVA (y se muestra el aviso de
+    # "cargo del mes anterior en borrador"): solo cuando ese cargo existe y sigue sin
+    # confirmar/postear. No aplica a residencias que nunca generan cargo (ver
+    # `ultima_corregible` abajo): esas nunca deben bloquear el avance a un nuevo
+    # período, igual que `ContadorLine._check_cargo_anterior_confirmado`.
     ultima_en_borrador = fields.Boolean(readonly=True)
+
+    # Controla si se muestra el botón "Corregir última lectura": existe una lectura
+    # mensual y todavía se puede corregir sin conflicto (su cargo está en borrador, o
+    # esta residencia no genera cargo -"not_invoiced"-, como las de solo consumo
+    # informativo). Solo se bloquea si ya está posteado/facturado o es migrado.
+    ultima_corregible = fields.Boolean(readonly=True)
 
     currency_id = fields.Many2one(related="residencia_id.currency_id", readonly=True)
 
@@ -71,6 +80,7 @@ class LecturaOperadorWizard(models.TransientModel):
             rec.modo_correccion = False
             rec.line_id = False
             rec.ultima_en_borrador = False
+            rec.ultima_corregible = False
 
     @api.onchange("residencia_id")
     def _onchange_residencia_id(self):
@@ -95,11 +105,27 @@ class LecturaOperadorWizard(models.TransientModel):
         self._cargar_modo_nueva()
 
         # Si se viene del Listado de Residencias por Proyecto y esta residencia ya
-        # tenía lectura ese período, entra directo en modo corrección (en vez de
-        # proponer el siguiente período y obligar a dar clic en "Corregir última
-        # lectura"). Solo aplica con este contexto puntual: entrando directo a
-        # "Registrar Lectura" el comportamiento normal no cambia.
-        if self.env.context.get("listado_forzar_correccion") and self.ultima_en_borrador and not self.es_inactivo:
+        # tenía lectura EN ESE MISMO período (listado_mes/listado_anio), entra directo
+        # en modo corrección (en vez de proponer el siguiente período y obligar a dar
+        # clic en "Corregir última lectura"). Solo aplica con este contexto puntual:
+        # entrando directo a "Registrar Lectura" el comportamiento normal no cambia.
+        #
+        # Se compara el período explícitamente (no solo `ultima_corregible`) porque
+        # residencias que nunca generan cargo (p. ej. "GENERAL") nunca quedan
+        # bloqueadas para avanzar de período (ver `ultima_en_borrador`), así que su
+        # última lectura mensual podría ya ser de un período MÁS ADELANTE que el que
+        # se está viendo en el listado.
+        last = self.env["asovec.contador.lines"]._last_mensual(self.contador_id.id)
+        listado_mes = self.env.context.get("listado_mes")
+        listado_anio = self.env.context.get("listado_anio")
+        if (
+            self.env.context.get("listado_forzar_correccion")
+            and not self.es_inactivo
+            and self.ultima_corregible
+            and last
+            and listado_mes and str(int(last.mes)) == str(int(listado_mes))
+            and listado_anio and int(last.anio) == int(listado_anio)
+        ):
             self.action_corregir_ultima()
 
     @api.onchange("lectura")
@@ -130,6 +156,11 @@ class LecturaOperadorWizard(models.TransientModel):
             self.lectura_anterior = (ini.lectura or 0.0) if ini else 0.0
 
         self.ultima_en_borrador = bool(last) and last.invoice_status_badge == "borrador"
+        # "Corregible" es más amplio que "en borrador": también incluye residencias
+        # que nunca generan cargo ("not_invoiced", p. ej. "GENERAL") - no hay ninguna
+        # factura con la que entrar en conflicto, así que corregir su lectura siempre
+        # es seguro. Solo se bloquea cuando ya está posteada/facturada o migrada.
+        self.ultima_corregible = bool(last) and last.invoice_status_badge in ("borrador", "not_invoiced")
 
         self.lectura = 0.0
         self._recalcular_preview()
@@ -137,8 +168,9 @@ class LecturaOperadorWizard(models.TransientModel):
     def action_corregir_ultima(self):
         """Carga la última lectura mensual ya registrada de este contador para poder
         corregirla, en vez de crear una nueva. Solo se permite si su cargo todavía no
-        está facturado (posteado); si lo está, `action_guardar` tampoco podría
-        regenerarlo y quedaría inconsistente con la factura ya emitida."""
+        está facturado (posteado) -o si nunca genera cargo-; si ya está facturado,
+        `action_guardar` tampoco podría regenerarlo y quedaría inconsistente con la
+        factura ya emitida."""
         self.ensure_one()
         if not self.contador_id:
             return
@@ -149,7 +181,7 @@ class LecturaOperadorWizard(models.TransientModel):
             raise UserError(_(
                 "Este contador todavía no tiene ninguna lectura mensual registrada para corregir."
             ))
-        if last.invoice_status_badge != "borrador":
+        if last.invoice_status_badge not in ("borrador", "not_invoiced"):
             raise UserError(_(
                 "No se puede corregir: el cargo de %s/%s ya no está en borrador (posteado, "
                 "facturado o migrado)."

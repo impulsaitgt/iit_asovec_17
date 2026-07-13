@@ -118,10 +118,16 @@ class ProyectoCobroMensual(models.Model):
     pct_inactivas = fields.Float(string="% Inactivas", compute="_compute_indicadores")
     residencias_cargo_generado = fields.Integer(string="Cargos generados", compute="_compute_indicadores")
     pct_cargo_generado = fields.Float(string="% Cargos generados", compute="_compute_indicadores")
+    # Distinto de "residencias_cargo_generado" (que exige un move_id real): una
+    # residencia con lectura pero sin nada que cobrar ese mes (p. ej. proyecto que
+    # solo cobra cuando hay exceso, y no hubo) también queda "resuelta" sin factura.
+    # Usa el mismo criterio que "Completar Faltantes" (_residencias_pendientes_generar)
+    # para no duplicar la definición de qué falta.
+    residencias_pendientes = fields.Integer(string="Pendientes por generar", compute="_compute_indicadores")
 
     # --------------------
     # Leyenda de progreso (para el botón Confirmar): la operación se considera
-    # completa cuando ya se generó el cargo de todas las residencias del proyecto.
+    # completa cuando ya no queda ninguna residencia pendiente por generar.
     # --------------------
     progreso_label = fields.Char(string="Progreso", compute="_compute_progreso")
     progreso_tipo = fields.Selection(
@@ -129,10 +135,10 @@ class ProyectoCobroMensual(models.Model):
         string="Tipo de progreso", compute="_compute_progreso",
     )
 
-    @api.depends("state", "total_residencias", "residencias_cargo_generado")
+    @api.depends("state", "residencias_pendientes")
     def _compute_progreso(self):
         for rec in self:
-            faltan = (rec.total_residencias or 0) - (rec.residencias_cargo_generado or 0)
+            faltan = rec.residencias_pendientes or 0
             if rec.state == "posted":
                 rec.progreso_label = _("Completo")
                 rec.progreso_tipo = "success"
@@ -195,7 +201,10 @@ class ProyectoCobroMensual(models.Model):
         lines = self.line_ids.filtered(lambda l: l.con_lectura == "Lectura Valida")
         return lines.mapped("residencia_id")
 
-    @api.depends("proyecto_aso_id", "line_ids.con_lectura", "line_ids.move_id", "line_ids.residencia_id")
+    @api.depends(
+        "proyecto_aso_id", "line_ids.con_lectura", "line_ids.move_id",
+        "line_ids.move_id.state", "line_ids.residencia_id",
+    )
     def _compute_indicadores(self):
         for rec in self:
             residencias = rec._residencias_scope()
@@ -214,6 +223,7 @@ class ProyectoCobroMensual(models.Model):
             rec.residencias_sin_lectura = len(sin_lectura)
             rec.residencias_inactivas = len(inactivas)
             rec.residencias_cargo_generado = len(cargo_generado)
+            rec.residencias_pendientes = len(rec._residencias_pendientes_generar())
 
             total_activas = len(activas)
             rec.pct_con_lectura = (len(con_lectura) / total_activas) if total_activas else 0.0
@@ -562,19 +572,24 @@ class ProyectoCobroMensual(models.Model):
     # nunca se muestre un error de tiempo agotado.
     _GENERATE_CHUNK_SIZE = 150
 
-    def _residencias_pendientes_generar(self):
+    def _residencias_pendientes_generar(self, solo_inactivas=False):
         """Residencias del proyecto que todavía no tienen cargo, o cuyo cargo quedó
         cancelado (regenerable). Las que ya tienen un cargo en borrador o posteado se
         excluyen: un borrador ya generado cuenta como "hecho" para este botón (si cambia
         una lectura, el cargo se regenera solo al guardarla, sin necesidad de este
         proceso), así cada click avanza sobre residencias distintas en vez de repetir
-        siempre las mismas."""
+        siempre las mismas.
+
+        Con `solo_inactivas=True` (usado por "Completar Inactivas") se limita el mismo
+        criterio a las residencias inactivas del proyecto."""
         self.ensure_one()
         Residencia = self.env["asovec.residencia"]
         residencias = Residencia.search([
             ("proyecto_aso_id", "=", self.proyecto_aso_id.id),
             ("no_paga_servicios", "=", False),
         ], order="id")
+        if solo_inactivas:
+            residencias = residencias.filtered(lambda r: not r.activo)
         existentes = {l.residencia_id.id: l for l in self.line_ids}
 
         pendientes = Residencia
@@ -593,13 +608,28 @@ class ProyectoCobroMensual(models.Model):
         error. Devuelve una notificación indicando cuántas quedan pendientes; hay que
         volver a presionar el botón hasta que no quede ninguna."""
         self.ensure_one()
+        self._check_puede_generar()
+        return self._generar_lote(self._residencias_pendientes_generar())
 
+    def action_generate_inactivas(self):
+        """Igual que "Completar Faltantes" (mismo motor, misma lógica de lotes/errores),
+        pero limitado solo a las residencias inactivas pendientes del proyecto."""
+        self.ensure_one()
+        self._check_puede_generar()
+        return self._generar_lote(self._residencias_pendientes_generar(solo_inactivas=True))
+
+    def _check_puede_generar(self):
+        self.ensure_one()
         if self.state != "draft":
             raise UserError(_("Solo puedes generar en estado Borrador."))
         if not self.proyecto_aso_id:
             raise UserError(_("Debes seleccionar un Proyecto."))
 
-        pendientes = self._residencias_pendientes_generar()
+    def _generar_lote(self, pendientes):
+        """Genera el cargo de un lote acotado (`_GENERATE_CHUNK_SIZE`) de `pendientes`.
+        Cuerpo compartido por action_generate y action_generate_inactivas: cuáles
+        residencias entran en `pendientes` es lo único que cambia entre ambos botones."""
+        self.ensure_one()
         total_pendientes = len(pendientes)
 
         if not total_pendientes:
@@ -685,11 +715,11 @@ class ProyectoCobroMensual(models.Model):
             if rec.state != "draft":
                 raise UserError(_("Solo puedes confirmar desde Borrador."))
 
-            if rec.residencias_cargo_generado != rec.total_residencias:
+            if rec.residencias_pendientes:
                 raise UserError(_(
-                    "Todavía faltan %s residencias sin cargo generado. Usa "
+                    "Todavía faltan %s residencias por generar. Usa "
                     "'Completar Faltantes' antes de confirmar."
-                ) % (rec.total_residencias - rec.residencias_cargo_generado))
+                ) % rec.residencias_pendientes)
 
             moves = rec.line_ids.mapped("move_id").filtered(lambda m: m)
             if not moves:
