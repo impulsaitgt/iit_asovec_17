@@ -658,6 +658,15 @@ class ContadorLine(models.Model):
             metros_extras = 0.0
 
         pago_extra = metros_extras * precio_maestro
+
+        # Residencia exonerada de exceso de agua: el exceso (metros_extras) se sigue
+        # calculando y guardando tal cual, para que quede visible cuánto se excedió;
+        # solo el COBRO de ese exceso se anula. Como _build_invoice_lines_residencia
+        # solo crea la línea de exceso cuando pago_extra > 0, dejarlo en 0 evita esa
+        # línea sin tener que tocar esa lógica aparte.
+        if residencia and residencia.exonera_exceso_agua:
+            pago_extra = 0.0
+
         pago_total = base + pago_extra
 
         return {
