@@ -35,20 +35,34 @@
                 <header>
                     <!-- Botón Generar: solo en borrador. Completa las residencias que aún no
                          tienen cargo y regenera (borra y vuelve a crear) las que siguen en
-                         borrador o canceladas; si alguna ya está posteada, se detiene con error. -->
+                         borrador o canceladas; si alguna ya está posteada, se detiene con error.
+                         Solo para pruebas/soporte: visible únicamente para el grupo
+                         Administrador (no para Administración Asociación ni Secretaria). -->
                     <button name="action_generate"
                         type="object"
                         string="Completar Faltantes"
                         class="btn-primary"
+                        invisible="state != 'draft'"
+                        groups="iit_asovec.asovec_group_administrador" />
+
+                    <!-- Igual que "Completar Faltantes" pero solo para las residencias
+                         inactivas del proyecto (mismo motor, ver _generar_lote). -->
+                    <button name="action_generate_inactivas"
+                        type="object"
+                        string="Completar Inactivas"
+                        class="btn-primary"
                         invisible="state != 'draft'" />
 
-                    <!-- Botón Confirmar: solo en borrador, y solo cuando ya se generó el
-                         cargo de todas las residencias del proyecto. -->
+                    <!-- Botón Confirmar: solo en borrador, y solo cuando ya no queda
+                         ninguna residencia pendiente por generar (mismo criterio que
+                         "Completar Faltantes", no exige que TODAS tengan un cargo/factura
+                         real: una residencia con lectura pero sin nada que cobrar ese mes
+                         también cuenta como resuelta). -->
                     <button name="action_confirm"
                         type="object"
                         string="Confirmar"
                         class="btn-primary"
-                        invisible="state != 'draft' or residencias_cargo_generado != total_residencias" />
+                        invisible="state != 'draft' or residencias_pendientes != 0" />
 
                     <!-- Opcional: regresar a borrador -->
                     <button name="action_set_draft"
@@ -121,6 +135,7 @@
                             <field name="name" readonly="1" />
                         </h1>
                         <field name="progreso_tipo" invisible="1" />
+                        <field name="residencias_pendientes" invisible="1" />
                         <field name="progreso_label" widget="badge" nolabel="1"
                             decoration-danger="progreso_tipo == 'danger'"
                             decoration-success="progreso_tipo == 'success'" />
