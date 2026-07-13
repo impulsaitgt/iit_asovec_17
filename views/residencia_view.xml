@@ -64,6 +64,7 @@
                             <field name="cobro_base_especial" />
                             <field name="cobro_base_especial_valor"
                                 readonly="not cobro_base_especial" />
+                            <field name="exonera_exceso_agua" />
                         </group>
                     </group>
                     <group>

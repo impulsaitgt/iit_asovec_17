@@ -69,6 +69,13 @@ class Residencia(models.Model):
              "sigue al del proyecto; si se marca 'Canon de agua propio' se puede definir uno "
              "distinto para esta residencia, y se usará al calcular la factura mensual.",
     )
+    exonera_exceso_agua = fields.Boolean(
+        string='Exonera Exceso Agua',
+        default=False,
+        help="Si se marca, esta residencia nunca paga por consumo en exceso: aunque la "
+             "lectura registre metros por encima del derecho base, el exceso y su cobro se "
+             "asignan en cero y no se genera la línea de exceso en el cargo.",
+    )
 
     @api.depends('direccion', 'calle', 'no_casa', 'proyecto_aso_id.name')
     def _compute_direccion_real(self):
