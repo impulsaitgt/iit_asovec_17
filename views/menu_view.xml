@@ -172,6 +172,66 @@
         parent="exportaciones_menu" action="proceso_lecturas_csv_wizard_action"
         groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_operador_lecturas" />
 
+    <!-- TEMPORAL: mismos wizards que arriba, pero como acciones dedicadas SIN
+         target=new (página completa, no popup) y con su propio menú, solo para el
+         grupo temporal. Si el primer menú visible de una app es un wizard en popup,
+         Odoo nunca termina de montar la barra de menú de la app detrás del modal, y
+         el usuario queda sin poder llegar al segundo menú. Con página completa el
+         primero que cargue sí monta el menú, y desde ahí ya se puede navegar al otro.
+         No se toca la acción/menú compartido de arriba: los demás roles siguen
+         viendo el popup de siempre. Borrar junto con el grupo al terminar. -->
+    <!-- Los botones de estos wizards viven en <footer>, que Odoo solo renderiza
+         cuando el formulario se abre como diálogo (target=new): en página completa
+         los extrae y los descarta, así que no aparecen. Estas vistas heredadas
+         agregan los mismos botones en un <header> (que sí se muestra siempre), sin
+         tocar el <footer> original que usan las acciones/roles compartidos. -->
+    <record id="view_asovec_proceso_analisis_mensual_wizard_form_temporal" model="ir.ui.view">
+        <field name="name">asovec.proceso_analisis_mensual_wizard.form.temporal</field>
+        <field name="model">asovec.proceso_analisis_mensual_wizard</field>
+        <field name="inherit_id" ref="view_asovec_proceso_analisis_mensual_wizard_form"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_generar" type="object" string="Generar" class="btn-primary"/>
+                    <button name="action_generar_excel" type="object" string="Generar Excel" class="btn-secondary"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+    <record id="proceso_analisis_mensual_wizard_action_temporal" model="ir.actions.act_window">
+        <field name="name">Análisis Mensual de la Asociación</field>
+        <field name="res_model">asovec.proceso_analisis_mensual_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_asovec_proceso_analisis_mensual_wizard_form_temporal"/>
+    </record>
+    <menuitem name="Análisis Mensual de la Asociación" id="proceso_analisis_mensual_opcion_temporal"
+        parent="consultas_menu" action="proceso_analisis_mensual_wizard_action_temporal"
+        groups="asovec_group_temporal_implementacion" sequence="1" />
+
+    <record id="view_asovec_proceso_estado_lecturas_excel_wizard_form_temporal" model="ir.ui.view">
+        <field name="name">asovec.proceso_estado_lecturas_excel_wizard.form.temporal</field>
+        <field name="model">asovec.proceso_estado_lecturas_excel_wizard</field>
+        <field name="inherit_id" ref="view_asovec_proceso_estado_lecturas_excel_wizard_form"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_generar" type="object" string="Generar" class="btn-primary"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+    <record id="proceso_estado_lecturas_excel_wizard_action_temporal" model="ir.actions.act_window">
+        <field name="name">Generar Excel de Estado de Lecturas</field>
+        <field name="res_model">asovec.proceso_estado_lecturas_excel_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_asovec_proceso_estado_lecturas_excel_wizard_form_temporal"/>
+    </record>
+    <menuitem name="Generar Excel de Estado de Lecturas" id="proceso_estado_lecturas_excel_opcion_temporal"
+        parent="exportaciones_menu" action="proceso_estado_lecturas_excel_wizard_action_temporal"
+        groups="asovec_group_temporal_implementacion" sequence="2" />
+
     <!-- Al final: carga inicial/migración, se usa una vez por residencia, no es
          parte del ciclo mensual recurrente ni del catálogo que se mantiene. -->
     <menuitem name="Migración" id="migracion_menu" parent="asovec_menu" sequence="70" />

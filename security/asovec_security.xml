@@ -41,4 +41,15 @@
         <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('base.group_allow_export'))]"/>
     </record>
 
+    <!-- TEMPORAL (borrar/desactivar al terminar la implementación): acceso solo a
+         "Análisis Mensual de la Asociación" y "Generar Excel de Estado de Lecturas",
+         nada más. Independiente a propósito: no implica ni es implicado por ningún
+         otro grupo de Asociación de Vecinos, así que se puede borrar sin afectar a
+         los demás roles. -->
+    <record id="asovec_group_temporal_implementacion" model="res.groups">
+        <field name="name">Temporal - Implementación (borrar después)</field>
+        <field name="category_id" ref="categoria_modulo_asovec"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
 </odoo>
