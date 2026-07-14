@@ -150,6 +150,13 @@ class TipoServicioAsoProyecto(models.Model):
         store=True, readonly=True,
     )
     precio = fields.Monetary(string='Precio', currency_field='currency_id', default=0.0, required=True)
+    cuenta_contable_id = fields.Many2one(
+        "account.account", string="Cuenta contable (excepción)",
+        domain="[('company_id', '=', company_id)]",
+        help="Si se configura, las líneas de este tipo de servicio para este proyecto "
+             "usan esta cuenta en vez de la cuenta por defecto del producto. Si se deja "
+             "vacío, Odoo calcula la cuenta normalmente a partir del producto.",
+    )
 
     _sql_constraints = [
         ('tipo_proyecto_unico', 'unique(tipo_servicio_aso_id, proyecto_aso_id)',

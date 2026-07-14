@@ -27,7 +27,9 @@
                                 <tree editable="bottom" string="Precios por Proyecto">
                                     <field name="proyecto_aso_id" />
                                     <field name="currency_id" column_invisible="1" />
+                                    <field name="company_id" column_invisible="1" />
                                     <field name="precio" />
+                                    <field name="cuenta_contable_id" optional="show" />
                                 </tree>
                             </field>
                         </page>

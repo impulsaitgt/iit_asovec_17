@@ -10,11 +10,12 @@
                 <field name="name" />
                 <field name="proyecto_aso_id" />
                 <field name="month" />
-                <field name="currency_id" invisible="1" />
+                <field name="currency_id" column_invisible="1" />
                 <field name="year" />
                 <field name="total_to_charge" />
                 <field name="total_paid" />
                 <field name="total_balance" />
+                <field name="residencias_sin_lectura" string="Lecturas pendientes" />
                 <field name="fecha_confirmacion" optional="hide" />
                 <field name="state" string="Estado"
                     widget="badge"
@@ -52,6 +53,18 @@
                         string="Completar Inactivas"
                         class="btn-primary"
                         invisible="state != 'draft'" />
+
+                    <!-- Borra y regenera TODOS los cargos ya existentes de este cobro
+                         mensual con la configuración vigente (precios, cuentas contables
+                         por proyecto, etc.) - para validar cambios de configuración sin
+                         corregir residencia por residencia. Solo Administrador. -->
+                    <button name="action_regenerar_cargos"
+                        type="object"
+                        string="🔄 Regenerar Cargos"
+                        class="btn-secondary"
+                        confirm="Esto borra TODOS los cargos ya generados de este cobro mensual (los que no estén posteados) y los vuelve a crear con la configuración vigente. ¿Continuar?"
+                        invisible="state != 'draft'"
+                        groups="iit_asovec.asovec_group_administrador" />
 
                     <!-- Botón Confirmar: solo en borrador, y solo cuando ya no queda
                          ninguna residencia pendiente por generar (mismo criterio que
@@ -220,6 +233,18 @@
                                             string="🖨️ Imprimir Recibo Detallado"
                                             class="btn-primary"
                                             icon="fa-file-pdf-o" />
+                                        <!-- Solo para validar configuración (precios, cuentas
+                                             contables por proyecto, etc.): borra y regenera el
+                                             cargo de ESTA residencia con los valores vigentes.
+                                             Solo Administrador; no aparece si ya está posteado
+                                             (ahí ni se podría regenerar). -->
+                                        <button name="action_regenerar_cargo"
+                                            type="object"
+                                            string="🔄 Regenerar Cargo"
+                                            class="btn-secondary"
+                                            confirm="Esto borra el cargo actual de esta residencia y lo vuelve a generar con la configuración vigente. ¿Continuar?"
+                                            invisible="move_state == 'posted'"
+                                            groups="iit_asovec.asovec_group_administrador" />
                                     </header>
                                     <field name="contador_line_id" invisible="1" />
                                     <group>
@@ -274,6 +299,11 @@
                         </page>
                     </notebook>
                 </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" />
+                    <field name="activity_ids" />
+                    <field name="message_ids" />
+                </div>
             </form>
         </field>
     </record>
