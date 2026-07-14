@@ -112,8 +112,8 @@ class ProyectoCobroMensual(models.Model):
     total_residencias = fields.Integer(string="Total residencias", compute="_compute_indicadores")
     residencias_con_lectura = fields.Integer(string="Con lectura", compute="_compute_indicadores")
     pct_con_lectura = fields.Float(string="% Con lectura", compute="_compute_indicadores")
-    residencias_sin_lectura = fields.Integer(string="Sin lectura", compute="_compute_indicadores")
-    pct_sin_lectura = fields.Float(string="% Sin lectura", compute="_compute_indicadores")
+    residencias_sin_lectura = fields.Integer(string="Sin lectura", compute="_compute_residencias_sin_lectura")
+    pct_sin_lectura = fields.Float(string="% Sin lectura", compute="_compute_residencias_sin_lectura")
     residencias_inactivas = fields.Integer(string="Inactivas", compute="_compute_indicadores")
     pct_inactivas = fields.Float(string="% Inactivas", compute="_compute_indicadores")
     residencias_cargo_generado = fields.Integer(string="Cargos generados", compute="_compute_indicadores")
@@ -124,6 +124,13 @@ class ProyectoCobroMensual(models.Model):
     # Usa el mismo criterio que "Completar Faltantes" (_residencias_pendientes_generar)
     # para no duplicar la definición de qué falta.
     residencias_pendientes = fields.Integer(string="Pendientes por generar", compute="_compute_indicadores")
+
+    # Uso interno de "Regenerar Cargos": recuerda hasta qué residencia (por id) ya se
+    # regeneró en la tanda en curso, para que el siguiente click continúe justo donde
+    # se quedó sin repetir ni saltarse ninguna. Se reinicia a -1 (no 0: comparar un
+    # Many2one con 0 en un domain de Odoo NO se comporta como comparación numérica
+    # normal -devuelve vacío siempre-, así que -1 es el valor real de "sin cursor").
+    regenerar_cargos_cursor = fields.Integer(string="Cursor de regeneración", default=-1)
 
     # --------------------
     # Leyenda de progreso (para el botón Confirmar): la operación se considera
@@ -214,22 +221,39 @@ class ProyectoCobroMensual(models.Model):
             activas = residencias - inactivas
 
             con_lectura = rec._residencias_con_lectura_ids() & activas
-            sin_lectura = activas - con_lectura
 
             cargo_generado = rec.line_ids.filtered(lambda l: l.move_id).mapped("residencia_id") & residencias
 
             rec.total_residencias = total
             rec.residencias_con_lectura = len(con_lectura)
-            rec.residencias_sin_lectura = len(sin_lectura)
             rec.residencias_inactivas = len(inactivas)
             rec.residencias_cargo_generado = len(cargo_generado)
             rec.residencias_pendientes = len(rec._residencias_pendientes_generar())
 
             total_activas = len(activas)
             rec.pct_con_lectura = (len(con_lectura) / total_activas) if total_activas else 0.0
-            rec.pct_sin_lectura = (len(sin_lectura) / total_activas) if total_activas else 0.0
             rec.pct_inactivas = (len(inactivas) / total) if total else 0.0
             rec.pct_cargo_generado = (len(cargo_generado) / total) if total else 0.0
+
+    @api.depends("state", "proyecto_aso_id", "line_ids.con_lectura", "line_ids.residencia_id")
+    def _compute_residencias_sin_lectura(self):
+        """Separado de _compute_indicadores a propósito: una vez posteado o
+        cancelado, 'sin lectura' ya no aporta nada (el ciclo quedó cerrado) y
+        calcularlo de todas formas sería costoso para una lista con muchos cobros
+        mensuales (columna "Lecturas pendientes"). Por eso corta ANTES de tocar
+        residencias en vez de solo poner el resultado en cero al final."""
+        for rec in self:
+            if rec.state != "draft":
+                rec.residencias_sin_lectura = 0
+                rec.pct_sin_lectura = 0.0
+                continue
+            residencias = rec._residencias_scope()
+            activas = residencias.filtered(lambda r: r.activo)
+            con_lectura = rec._residencias_con_lectura_ids() & activas
+            sin_lectura = activas - con_lectura
+            rec.residencias_sin_lectura = len(sin_lectura)
+            total_activas = len(activas)
+            rec.pct_sin_lectura = (len(sin_lectura) / total_activas) if total_activas else 0.0
 
     def _action_ver_residencias(self, residencias, nombre):
         return {
@@ -387,6 +411,17 @@ class ProyectoCobroMensual(models.Model):
 
         return {"base": base, "exceso": exceso, "inactivo": inactivo}
 
+    def _cuenta_override_tipo_servicio(self, tipo_servicio_aso, proyecto_aso):
+        """Cuenta contable configurada como excepción para este tipo de servicio en este
+        proyecto (asovec.tipo_servicio_aso.proyecto.cuenta_contable_id). Si no hay
+        configuración para este proyecto, o no se marcó cuenta, devuelve un recordset
+        vacío: en ese caso se deja el vals de la línea sin 'account_id' y Odoo calcula
+        la cuenta como de costumbre a partir del producto."""
+        detalle = tipo_servicio_aso.proyecto_ids.filtered(
+            lambda d: d.proyecto_aso_id.id == proyecto_aso.id
+        )
+        return detalle[:1].cuenta_contable_id
+
     def _build_invoice_lines_residencia(self, residencia, servicios, lectura, productos_especiales=None):
         """Devuelve (invoice_lines, con_lectura) para una residencia, igual a la lógica
         original de action_generate."""
@@ -406,40 +441,49 @@ class ProyectoCobroMensual(models.Model):
                 # Este tipo de servicio no se cobra para residencias inactivas.
                 continue
 
+            detalle_proyecto = t.tipo_servicio_aso_id.proyecto_ids.filtered(
+                lambda d: d.proyecto_aso_id.id == residencia.proyecto_aso_id.id
+            )
+
             servicio_especial = ResidenciaLines.search([
                 ("residencia_id", "=", residencia.id), ("producto_id", "=", t.id)
             ])
             if servicio_especial:
                 precio = servicio_especial.precio
             else:
-                detalle_proyecto = t.tipo_servicio_aso_id.proyecto_ids.filtered(
-                    lambda d: d.proyecto_aso_id.id == residencia.proyecto_aso_id.id
-                )
                 if not detalle_proyecto:
                     # No aplica a este proyecto: no hay precio configurado para él.
                     continue
                 precio = detalle_proyecto[0].precio
 
             if precio > 0:
-                invoice_lines.append((0, 0, {
+                vals_line = {
                     "product_id": product.id,
                     "name": t.name,
                     "quantity": 1.0,
                     "price_unit": precio,
                     "tax_ids": [(6, 0, [])],   # sin impuestos
-                }))
+                }
+                cuenta = detalle_proyecto[:1].cuenta_contable_id
+                if cuenta:
+                    vals_line["account_id"] = cuenta.id
+                invoice_lines.append((0, 0, vals_line))
 
         if not residencia.activo:
             # Cuota para contadores inactivos
             con_lectura = "Inactivo"
             servicio = productos_especiales["inactivo"]
-            invoice_lines.append((0, 0, {
+            vals_line_inactivo = {
                 "product_id": servicio.product_variant_id.id,
                 "name": servicio.name,
                 "quantity": 1.0,
                 "price_unit": residencia.proyecto_aso_id.cobro_inactivas,
                 "tax_ids": [(6, 0, [])],   # sin impuestos
-            }))
+            }
+            cuenta = self._cuenta_override_tipo_servicio(servicio.tipo_servicio_aso_id, residencia.proyecto_aso_id)
+            if cuenta:
+                vals_line_inactivo["account_id"] = cuenta.id
+            invoice_lines.append((0, 0, vals_line_inactivo))
         else:
             con_lectura = "Lectura Valida" if lectura else "Sin Lectura"
 
@@ -464,6 +508,9 @@ class ProyectoCobroMensual(models.Model):
                 }
                 if lectura:
                     vals_line["contador_line_id"] = lectura.id
+                cuenta = self._cuenta_override_tipo_servicio(servicio.tipo_servicio_aso_id, residencia.proyecto_aso_id)
+                if cuenta:
+                    vals_line["account_id"] = cuenta.id
                 invoice_lines.append((0, 0, vals_line))
 
             # Pago extra para contadores
@@ -481,6 +528,9 @@ class ProyectoCobroMensual(models.Model):
                     # La cuota base no generó línea: enlazar la lectura aquí para que
                     # el seguimiento de facturación/pago siga funcionando.
                     vals_line_exceso["contador_line_id"] = lectura.id
+                cuenta = self._cuenta_override_tipo_servicio(servicio.tipo_servicio_aso_id, residencia.proyecto_aso_id)
+                if cuenta:
+                    vals_line_exceso["account_id"] = cuenta.id
                 invoice_lines.append((0, 0, vals_line_exceso))
 
         return invoice_lines, con_lectura
@@ -680,6 +730,89 @@ class ProyectoCobroMensual(models.Model):
             ) % (generados, total_pendientes, faltan)
         else:
             message = _("Se generaron las %s residencias pendientes. ¡Completo!") % generados
+
+        self.message_post(body=message)
+        return self._reabrir_form_action()
+
+    # ~80s observados para 266 residencias en pruebas reales (~0.3s c/u). Con 150 por
+    # tanda quedan ~45-50s por click, con margen bajo el límite de 120s del servidor
+    # (limit_time_real) incluso para proyectos grandes (568 residencias = 4 clicks).
+    _REGENERAR_CARGOS_CHUNK_SIZE = 150
+
+    def action_regenerar_cargos(self):
+        """Regenera (borra y vuelve a crear) el cargo de las residencias de este cobro
+        mensual, con la configuración vigente (precios, cuentas contables por
+        proyecto, etc.) - útil después de cambiar esa configuración para que los
+        cargos ya generados la reflejen, sin corregir residencia por residencia.
+
+        Blindado en dos frentes:
+        - Por tiempo: procesa en tandas de `_REGENERAR_CARGOS_CHUNK_SIZE` residencias
+          por click (usando `regenerar_cargos_cursor` para no repetir ni saltarse
+          ninguna entre clicks), para no exceder el límite de tiempo de una petición
+          web en proyectos grandes.
+        - Por errores puntuales: cada residencia se regenera dentro de su propio
+          savepoint; si una falla (dato faltante, configuración inválida, etc.), se
+          revierte SOLO esa residencia y se sigue con las demás, en vez de perder
+          toda la tanda. Las fallidas se listan al final para poder corregirlas."""
+        self.ensure_one()
+        if self.state != "draft":
+            raise UserError(_("Solo puedes regenerar cargos en estado Borrador."))
+
+        Line = self.env["asovec.proyecto_cobro_mensual_line"]
+        lineas = Line.search([
+            ("cobro_id", "=", self.id),
+            ("residencia_id", "!=", False),
+            ("residencia_id", ">", self.regenerar_cargos_cursor),
+        ], order="residencia_id asc", limit=self._REGENERAR_CARGOS_CHUNK_SIZE)
+
+        if not lineas:
+            self.regenerar_cargos_cursor = -1
+            self.env.cr.commit()
+            self.message_post(body=_("No queda ninguna residencia por regenerar en este ciclo. ¡Completo!"))
+            return self._reabrir_form_action()
+
+        # Capturar todo ANTES de regenerar: cada regeneración borra y recrea la línea.
+        a_procesar = [(l.residencia_id, l.contador_line_id, l.move_id) for l in lineas]
+        ultimo_residencia_id = max(r.id for r, _, _ in a_procesar)
+
+        journal = self._get_journal_cargo()
+        servicios = self._get_servicios_automaticos()
+        productos_especiales = self._get_productos_especiales()
+
+        regenerados = 0
+        saltados = 0
+        fallidos = []
+        for residencia, lectura, move in a_procesar:
+            if move and move.state == "posted":
+                saltados += 1
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    self._generar_cargo_residencia(
+                        residencia, lectura=lectura, journal=journal,
+                        servicios=servicios, productos_especiales=productos_especiales,
+                    )
+                regenerados += 1
+            except Exception as e:
+                fallidos.append(_("%s: %s") % (residencia.display_name, str(e)))
+
+        restantes = Line.search_count([
+            ("cobro_id", "=", self.id),
+            ("residencia_id", "!=", False),
+            ("residencia_id", ">", ultimo_residencia_id),
+        ])
+        self.regenerar_cargos_cursor = ultimo_residencia_id if restantes else -1
+        self.env.cr.commit()
+
+        message = _("Se regeneraron %s cargos.") % regenerados
+        if saltados:
+            message += _(" %s ya estaban posteados y se saltaron.") % saltados
+        if restantes:
+            message += _(" Quedan %s residencias más: vuelve a presionar el botón para continuar.") % restantes
+        else:
+            message += _(" ¡Completo!")
+        if fallidos:
+            message += "\n\n" + _("%s fallaron:") % len(fallidos) + "\n" + "\n".join(fallidos)
 
         self.message_post(body=message)
         return self._reabrir_form_action()
@@ -944,6 +1077,23 @@ class ProyectoCobroMensualLine(models.Model):
             # lado (sin este contexto), Guardar se comporta como siempre.
             "context": {"cobro_mensual_return_id": self.cobro_id.id},
         }
+
+    def action_regenerar_cargo(self):
+        """Borra el cargo de esta residencia (si sigue en borrador o cancelado) y lo
+        vuelve a generar con la configuración vigente (precios, cuentas contables por
+        proyecto, etc.) - útil para validar cambios de configuración sin tener que
+        tocar la lectura. Si el cargo ya está posteado, `_generar_cargo_residencia`
+        lanza error y no hace nada.
+
+        Los valores se capturan ANTES de regenerar porque _generar_cargo_residencia
+        borra y recrea esta misma línea (self): leer self.* después de eso fallaría
+        con MissingError (mismo caso que action_corregir_lectura)."""
+        self.ensure_one()
+        cobro = self.cobro_id
+        residencia = self.residencia_id
+        lectura = self.contador_line_id
+        cobro._generar_cargo_residencia(residencia, lectura=lectura)
+        return cobro._reabrir_form_action()
 
     # --------------------
     # Formato CSV compartido (usado por el cobro mensual individual y por el proceso

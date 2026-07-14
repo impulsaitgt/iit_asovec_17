@@ -6,13 +6,19 @@
         <field name="model">account.journal</field>
         <field name="inherit_id" ref="account.view_account_journal_form"/>
         <field name="arch" type="xml">
-            <field name="type" position="after">
-                <field name="aso_cargo"/>
-                <field name="convenio_principal" readonly="aso_cargo != 'Si'"/>
-                <field name="aso_cargo_otro"/>
-                <field name="convenio_otro" readonly="aso_cargo_otro != 'Si'"/>
-                <field name="diario_relacionado_id" invisible="type != 'sale'"/>
-            </field>
+            <xpath expr="//notebook" position="before">
+                <group string="Asociación de Vecinos">
+                    <group>
+                        <field name="aso_cargo"/>
+                        <field name="convenio_principal" readonly="aso_cargo != 'Si'"/>
+                    </group>
+                    <group>
+                        <field name="aso_cargo_otro"/>
+                        <field name="convenio_otro" readonly="aso_cargo_otro != 'Si'"/>
+                        <field name="diario_relacionado_id" invisible="type != 'sale'"/>
+                    </group>
+                </group>
+            </xpath>
         </field>
     </record>
 </odoo>

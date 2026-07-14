@@ -54,28 +54,25 @@
             </div>
 
             <group invisible="not log">
-              <field name="log" nolabel="1" readonly="1" />
+              <field name="log" nolabel="1" colspan="2" readonly="1" />
             </group>
 
-            <notebook invisible="not line_ids">
-              <page string="Filas con error" name="filas_error" invisible="total_errores == 0">
+            <!-- Solo se muestran las filas con error a propósito: una vez que una fila
+                 queda validada/procesada sin error, ya no aporta nada revisarla en
+                 pantalla (y con cientos de filas, mostrarlas todas es puro ruido). Para
+                 revisar los pagos generados, están en el registro de pagos normal de
+                 Contabilidad. -->
+            <notebook invisible="total_errores == 0">
+              <page string="Filas con error" name="filas_error">
+                <div class="mb-2">
+                  <button name="action_exportar_errores_excel" type="object"
+                    string="📄 Descargar errores a Excel" class="btn-secondary" />
+                </div>
+                <field name="file_name" invisible="1" />
+                <field name="file_data" filename="file_name" widget="binary"
+                  readonly="1" string="Excel generado" invisible="not file_data" />
                 <field name="line_ids" domain="[('error', '!=', False)]">
                   <tree editable="false" decoration-danger="error">
-                    <field name="correlativo" />
-                    <field name="residencia_code" />
-                    <field name="nombre" />
-                    <field name="cuota" />
-                    <field name="saldo" />
-                    <field name="saldo_mes_calculado" />
-                    <field name="saldo_anterior_calculado" />
-                    <field name="etapa_error" />
-                    <field name="error" />
-                  </tree>
-                </field>
-              </page>
-              <page string="Todas las filas" name="todas_las_filas">
-                <field name="line_ids">
-                  <tree editable="false" decoration-danger="error" decoration-muted="procesado and not error">
                     <field name="correlativo" />
                     <field name="residencia_code" />
                     <field name="residencia_id" />
@@ -84,13 +81,8 @@
                     <field name="saldo" />
                     <field name="saldo_mes_calculado" />
                     <field name="saldo_anterior_calculado" />
-                    <field name="fecha" />
-                    <field name="nombre_agencia" />
-                    <field name="validado" />
-                    <field name="procesado" />
                     <field name="etapa_error" />
                     <field name="error" />
-                    <field name="payment_ids" widget="many2many_tags" />
                   </tree>
                 </field>
               </page>

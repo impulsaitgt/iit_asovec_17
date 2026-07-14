@@ -2,8 +2,9 @@
 import base64
 import csv
 import io
-from collections import defaultdict
 from datetime import date
+
+import xlsxwriter
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
@@ -16,8 +17,13 @@ class ProcesoCargaPagosBancoWizard(models.TransientModel):
     _name = "asovec.proceso_carga_pagos_banco_wizard"
     _description = "Carga de Pagos del Banco (CSV manual, mientras no exista Servipagos)"
 
-    # Igual estrategia de lotes acotados que "Cargar Deudas/Facturas Anteriores" y
-    # "Completar Faltantes": evita exceder el tiempo límite de una sola petición web.
+    # Esto YA NO requiere que el usuario presione el botón varias veces: cada click
+    # procesa TODAS las filas pendientes en una sola ejecución (ver action_validar /
+    # action_generar_pagos). Este tamaño solo controla cada cuántas filas se hace un
+    # commit intermedio, para no perder el progreso si algo falla a la mitad en una
+    # carga grande. Volúmenes típicos observados: ~60 pagos, máximo visto ~100 (más
+    # en cierres de mes); con esto cubierto de sobra dentro del límite de tiempo del
+    # servidor incluso para varios cientos de filas.
     _VALIDAR_CHUNK_SIZE = 200
     _PAGAR_CHUNK_SIZE = 80
 
@@ -70,6 +76,9 @@ class ProcesoCargaPagosBancoWizard(models.TransientModel):
     total_pendientes_pagar = fields.Integer(string="Filas pendientes de generar pago", readonly=True, compute="_compute_totales")
 
     log = fields.Text(readonly=True)
+
+    file_data = fields.Binary(string="Errores (Excel)", readonly=True)
+    file_name = fields.Char(string="Nombre del Excel de errores", readonly=True)
 
     @api.model
     def default_get(self, fields_list):
@@ -271,11 +280,16 @@ class ProcesoCargaPagosBancoWizard(models.TransientModel):
             self._actualizar_estado_validacion()
             return self._reabrir_form_action()
 
-        lote = pendientes[: self._VALIDAR_CHUNK_SIZE]
-        for line in lote:
-            self._validar_linea(line)
+        total = len(pendientes)
+        validadas = 0
+        for i in range(0, total, self._VALIDAR_CHUNK_SIZE):
+            lote = pendientes[i:i + self._VALIDAR_CHUNK_SIZE]
+            for line in lote:
+                self._validar_linea(line)
+            validadas += len(lote)
+            self.env.cr.commit()
 
-        self._actualizar_estado_validacion(validadas_en_lote=len(lote))
+        self._actualizar_estado_validacion(validadas_en_lote=validadas)
         self.env.cr.commit()
 
         return self._reabrir_form_action()
@@ -283,17 +297,12 @@ class ProcesoCargaPagosBancoWizard(models.TransientModel):
     def _actualizar_estado_validacion(self, validadas_en_lote=None):
         self.ensure_one()
         con_error = self.line_ids.filtered("error")
-        pendientes = self.line_ids.filtered(lambda l: not l.validado)
 
         partes = []
         if validadas_en_lote is not None:
-            partes.append(_("Se validaron %s fila(s) en este lote.") % validadas_en_lote)
+            partes.append(_("Se validaron %s fila(s).") % validadas_en_lote)
 
-        if pendientes:
-            partes.append(_(
-                "Faltan %s de %s filas por validar: vuelve a presionar 'Validar' para continuar."
-            ) % (len(pendientes), self.total_filas))
-        elif con_error:
+        if con_error:
             self.state = "con_error"
             partes.append(_(
                 "%s fila(s) con error de %s en total. Corrige los datos (residencia, saldo o "
@@ -334,6 +343,28 @@ class ProcesoCargaPagosBancoWizard(models.TransientModel):
             "aso_pago_banco_pago_con_tc": line.pago_con_tc,
         }
 
+    def _crear_pagos(self, moves, fecha_pago):
+        """Crea un pago INDEPENDIENTE por cada cargo (factura) en `moves`, sin
+        combinar varios cargos en un solo pago -ni siquiera si son del mismo mes-:
+        cada factura debe quedar registrada/conciliada con su propio pago."""
+        self.ensure_one()
+        pagos_creados = self.env["account.payment"]
+        for move in moves:
+            diario_pago = move.journal_id.diario_relacionado_id
+            if not diario_pago:
+                raise UserError(_(
+                    "El diario '%s' no tiene Diario Relacionado configurado."
+                ) % move.journal_id.name)
+            register = self.env["account.payment.register"].with_context(
+                active_model="account.move",
+                active_ids=move.ids,
+            ).create({
+                "journal_id": diario_pago.id,
+                "payment_date": fecha_pago,
+            })
+            pagos_creados |= register._create_payments()
+        return pagos_creados
+
     def _generar_pagos_linea(self, line):
         self.ensure_one()
         residencia = line.residencia_id
@@ -343,30 +374,7 @@ class ProcesoCargaPagosBancoWizard(models.TransientModel):
             return 0
 
         fecha_pago = line.fecha or fields.Date.context_today(self)
-
-        grupos = defaultdict(lambda: self.env["account.move"])
-        diario_por_id = {}
-        for move in moves:
-            diario_pago = move.journal_id.diario_relacionado_id
-            grupos[diario_pago.id] |= move
-            diario_por_id[diario_pago.id] = diario_pago
-
-        pagos_creados = self.env["account.payment"]
-        for diario_id, moves_grupo in grupos.items():
-            if not diario_id:
-                raise UserError(_(
-                    "El diario '%s' no tiene Diario Relacionado configurado."
-                ) % moves_grupo[:1].journal_id.name)
-            diario_pago = diario_por_id[diario_id]
-            register = self.env["account.payment.register"].with_context(
-                active_model="account.move",
-                active_ids=moves_grupo.ids,
-            ).create({
-                "journal_id": diario_pago.id,
-                "payment_date": fecha_pago,
-                "group_payment": True,
-            })
-            pagos_creados |= register._create_payments()
+        pagos_creados = self._crear_pagos(moves, fecha_pago)
 
         pagos_creados.write(self._datos_banco_vals(line))
         line.payment_ids = [(6, 0, pagos_creados.ids)]
@@ -382,48 +390,102 @@ class ProcesoCargaPagosBancoWizard(models.TransientModel):
             self.state = "completo"
             return self._reabrir_form_action()
 
-        lote = pendientes[: self._PAGAR_CHUNK_SIZE]
-
+        total = len(pendientes)
         generados = 0
-        fallidas_en_lote = []
-        for line in lote:
-            try:
-                with self.env.cr.savepoint():
-                    generados += self._generar_pagos_linea(line)
-            except Exception as e:
-                # Una residencia con error (por ejemplo, un rechazo de Hacienda al
-                # confirmar el pago/recibo FEL) NUNCA debe detener el resto del lote:
-                # se deja constancia clara de cuál falló y se continúa con las demás.
-                # El savepoint ya revirtió cualquier cosa parcial que se hubiera
-                # alcanzado a crear para esta residencia.
-                line.write({"error": str(e), "etapa_error": "pago"})
-                fallidas_en_lote.append(line.residencia_code)
-                continue
-            line.write({"procesado": True, "error": False, "etapa_error": False})
+        fallidas = []
+        for i in range(0, total, self._PAGAR_CHUNK_SIZE):
+            lote = pendientes[i:i + self._PAGAR_CHUNK_SIZE]
+            for line in lote:
+                try:
+                    with self.env.cr.savepoint():
+                        generados += self._generar_pagos_linea(line)
+                except Exception as e:
+                    # Una residencia con error (por ejemplo, un rechazo de Hacienda al
+                    # confirmar el pago/recibo FEL) NUNCA debe detener el resto del
+                    # proceso: se deja constancia clara de cuál falló y se continúa
+                    # con las demás. El savepoint ya revirtió cualquier cosa parcial
+                    # que se hubiera alcanzado a crear para esta residencia.
+                    line.write({"error": str(e), "etapa_error": "pago"})
+                    fallidas.append(line.residencia_code)
+                    continue
+                line.write({"procesado": True, "error": False, "etapa_error": False})
+            self.total_generados += generados
+            self.env.cr.commit()
+            generados = 0  # ya sumado arriba; evita contarlo doble si hay mas de un lote
 
-        self.total_generados += generados
-
-        faltan = len(self.line_ids.filtered(lambda l: not l.procesado))
-        con_error_pago = self.line_ids.filtered(lambda l: l.error and l.etapa_error == "pago")
-        partes = [_("Se generaron %s pago(s) en este lote.") % generados]
-        if fallidas_en_lote:
+        partes = [_("Se generaron %s pago(s).") % self.total_generados]
+        if fallidas:
             partes.append(_(
-                "ATENCIÓN: fallaron %s residencia(s) en este lote (%s). En total hay %s fila(s) "
-                "con error de generación de pago: revísalas en la pestaña 'Filas con error'. "
-                "Para reintentarlas, corrige lo que corresponda y sube un CSV nuevo que cuadre "
-                "solo con esas residencias."
-            ) % (len(fallidas_en_lote), ", ".join(fallidas_en_lote), len(con_error_pago)))
-        if faltan:
-            self.state = "procesando"
-            partes.append(_(
-                "Faltan %s fila(s) por procesar: vuelve a presionar 'Generar Pagos' para continuar."
-            ) % faltan)
-        else:
-            self.state = "completo"
-            partes.append(_("Completo: se generaron %s pagos en total.") % self.total_generados)
+                "ATENCIÓN: fallaron %s residencia(s) (%s). Revísalas en la pestaña 'Filas con "
+                "error' (o descárgalas a Excel). Para reintentarlas, corrige lo que corresponda "
+                "y sube un CSV nuevo que cuadre solo con esas residencias."
+            ) % (len(fallidas), ", ".join(fallidas)))
+        # Siempre "completo": ya se intentó procesar TODO en esta ejecución. Las
+        # fallidas (etapa_error='pago') quedan visibles vía el banner/alerta de
+        # total_errores_pago (independiente de este estado), no bloqueando el wizard.
+        self.state = "completo"
 
         self.log = ((self.log or "") + "\n" + " ".join(partes)).strip()
         self.env.cr.commit()
+
+        return self._reabrir_form_action()
+
+    # -------------------------
+    # Exportar filas con error a Excel
+    # -------------------------
+    def action_exportar_errores_excel(self):
+        self.ensure_one()
+        errores = self.line_ids.filtered("error")
+        if not errores:
+            raise UserError(_("No hay filas con error para exportar."))
+
+        buffer = io.BytesIO()
+        workbook = xlsxwriter.Workbook(buffer, {"in_memory": True})
+        sheet = workbook.add_worksheet("Errores")
+
+        header_fmt = workbook.add_format({
+            "bold": True, "bg_color": "#c62828", "font_color": "#ffffff", "border": 1,
+        })
+        money_fmt = workbook.add_format({"num_format": "#,##0.00"})
+
+        headers = [
+            "Correlativo", "Código", "Residencia", "Nombre", "Cuota (CSV)", "Cuota (Sistema)",
+            "Saldo (CSV)", "Saldo (Sistema)", "Fecha", "Agencia", "Etapa", "Error",
+        ]
+        for col, texto in enumerate(headers):
+            sheet.write(0, col, texto, header_fmt)
+
+        LineModel = self.env["asovec.proceso_carga_pagos_banco_wizard.line"]
+        etapa_labels = dict(LineModel._fields["etapa_error"].selection)
+
+        row = 1
+        for line in errores:
+            sheet.write(row, 0, line.correlativo or "")
+            sheet.write(row, 1, line.residencia_code or "")
+            sheet.write(row, 2, line.residencia_id.name or "")
+            sheet.write(row, 3, line.nombre or "")
+            sheet.write(row, 4, line.cuota, money_fmt)
+            sheet.write(row, 5, line.saldo_mes_calculado, money_fmt)
+            sheet.write(row, 6, line.saldo, money_fmt)
+            sheet.write(row, 7, line.saldo_anterior_calculado, money_fmt)
+            sheet.write(row, 8, line.fecha_texto or "")
+            sheet.write(row, 9, line.nombre_agencia or "")
+            sheet.write(row, 10, etapa_labels.get(line.etapa_error, ""))
+            sheet.write(row, 11, line.error or "")
+            row += 1
+
+        widths = [14, 10, 12, 26, 12, 14, 12, 14, 12, 18, 16, 60]
+        for col, w in enumerate(widths):
+            sheet.set_column(col, col, w)
+
+        workbook.close()
+        buffer.seek(0)
+
+        mes_label = dict(MONTH_SELECTION).get(self.mes, self.mes)
+        self.write({
+            "file_data": base64.b64encode(buffer.read()),
+            "file_name": "Errores_Carga_Pagos_Banco_%s_%s.xlsx" % (mes_label, self.anio),
+        })
 
         return self._reabrir_form_action()
 
