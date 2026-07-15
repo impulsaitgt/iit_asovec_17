@@ -16,12 +16,9 @@ from . import proceso_recibo_masivo_wizard
 from . import residencia_recibo_masivo_report
 from . import proceso_estado_cuenta_csv_wizard
 from . import proceso_estado_lecturas_excel_wizard
-from . import proceso_carga_deudas_wizard
 from . import proceso_analisis_mensual_wizard
 from . import analisis_mensual_report
 from . import lectura_operador_wizard
 from . import proceso_lecturas_csv_wizard
 from . import lectura_listado_wizard
 from . import cargo_residencia_report
-from . import account_payment
-from . import proceso_carga_pagos_banco_wizard

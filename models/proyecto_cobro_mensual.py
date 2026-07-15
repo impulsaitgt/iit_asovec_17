@@ -683,8 +683,7 @@ class ProyectoCobroMensual(models.Model):
         total_pendientes = len(pendientes)
 
         if not total_pendientes:
-            self.message_post(body=_("No hay residencias pendientes por generar."))
-            return self._reabrir_form_action()
+            return self._notificar_y_reabrir(_("No hay residencias pendientes por generar."))
 
         lote = pendientes[: self._GENERATE_CHUNK_SIZE]
 
@@ -728,11 +727,10 @@ class ProyectoCobroMensual(models.Model):
                 "Se generaron %s de %s residencias pendientes. Faltan %s: vuelve a "
                 "presionar el botón para continuar."
             ) % (generados, total_pendientes, faltan)
-        else:
-            message = _("Se generaron las %s residencias pendientes. ¡Completo!") % generados
+            return self._notificar_y_reabrir(message, notif_type="warning")
 
-        self.message_post(body=message)
-        return self._reabrir_form_action()
+        message = _("Se generaron las %s residencias pendientes. ¡Completo!") % generados
+        return self._notificar_y_reabrir(message, notif_type="success")
 
     # ~80s observados para 266 residencias en pruebas reales (~0.3s c/u). Con 150 por
     # tanda quedan ~45-50s por click, con margen bajo el límite de 120s del servidor
@@ -768,8 +766,10 @@ class ProyectoCobroMensual(models.Model):
         if not lineas:
             self.regenerar_cargos_cursor = -1
             self.env.cr.commit()
-            self.message_post(body=_("No queda ninguna residencia por regenerar en este ciclo. ¡Completo!"))
-            return self._reabrir_form_action()
+            return self._notificar_y_reabrir(
+                _("No queda ninguna residencia por regenerar en este ciclo. ¡Completo!"),
+                notif_type="success",
+            )
 
         # Capturar todo ANTES de regenerar: cada regeneración borra y recrea la línea.
         a_procesar = [(l.residencia_id, l.contador_line_id, l.move_id) for l in lineas]
@@ -814,8 +814,8 @@ class ProyectoCobroMensual(models.Model):
         if fallidos:
             message += "\n\n" + _("%s fallaron:") % len(fallidos) + "\n" + "\n".join(fallidos)
 
-        self.message_post(body=message)
-        return self._reabrir_form_action()
+        notif_type = "warning" if (restantes or fallidos) else "success"
+        return self._notificar_y_reabrir(message, notif_type=notif_type, sticky=bool(fallidos))
 
     def _reabrir_form_action(self):
         """Reabre este mismo registro en su vista de formulario. Se usa en vez de una
@@ -830,6 +830,25 @@ class ProyectoCobroMensual(models.Model):
             "views": [(False, "form")],
             "res_id": self.id,
             "target": "current",
+        }
+
+    def _notificar_y_reabrir(self, message, notif_type="info", sticky=False):
+        """Muestra `message` en una notificación flotante (no bloqueante, no ocupa
+        espacio en el formulario) y, al cerrarla, reabre este mismo registro. Se usa en
+        vez de `message_post`/chatter para los avisos de progreso de estos procesos por
+        lotes (completar faltantes, regenerar cargos): esos botones se presionan varias
+        veces seguidas y un chatter permanente terminaba tapando el formulario."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Cobro Mensual"),
+                "message": message,
+                "type": notif_type,
+                "sticky": sticky,
+                "next": self._reabrir_form_action(),
+            },
         }
 
     # Postear en lotes evita exceder el tiempo límite de una sola petición web
