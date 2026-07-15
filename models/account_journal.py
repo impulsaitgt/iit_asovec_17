@@ -5,7 +5,13 @@ from odoo.exceptions import ValidationError
 class AccountJournal(models.Model):
     _inherit = 'account.journal'
 
-    aso_cargo = fields.Selection([('No', 'No'), ('Si', 'Si')], default='No', string='Cargo Asociacion')
+    aso_cargo_migrado = fields.Selection(
+        [('No', 'No'), ('Si', 'Si')], default='No', string='Cargo Migrado',
+        help="Diario reservado para el proceso de Migración de Deuda: solo se puede "
+             "cargar desde ahí, nunca operando una factura manualmente desde "
+             "Facturación. Excluyente con 'Cargo Automatico Asociacion' (son procesos "
+             "distintos, un diario no puede ser de los dos a la vez).",
+    )
     convenio_principal = fields.Char(string='Convenio Principal')
 
     aso_cargo_otro = fields.Selection([('No', 'No'), ('Si', 'Si')], default='No', string='Cargo Asociacion Otro')
@@ -15,16 +21,24 @@ class AccountJournal(models.Model):
         [('No', 'No'), ('Si', 'Si')], default='No', string='Cargo Automatico Asociacion',
         help="Diario único que usa el proceso de Cobros Mensuales para postear los cargos "
              "automáticos. Solo puede haber un diario por compañía con este flag en 'Si'. "
-             "'Cargo Asociacion' es solo una sugerencia usada en otras partes del sistema "
-             "(por ejemplo, el CSV de estado de cuenta) y puede repetirse en varios diarios.",
+             "Excluyente con 'Cargo Migrado' (son procesos distintos, un diario no puede "
+             "ser de los dos a la vez).",
     )
 
-    @api.constrains('aso_cargo', 'convenio_principal', 'aso_cargo_otro', 'convenio_otro')
+    aso_valida_residencia = fields.Boolean(
+        string='Valida/Sugiere Residencia', default=True,
+        help="Si está activo, las facturas/notas de crédito de este diario sugieren "
+             "automáticamente la Residencia del residente y no se pueden grabar sin una "
+             "Residencia válida. Desactívelo para diarios usados para otros controles "
+             "donde no aplica el concepto de Residencia, aunque el cliente sea un residente.",
+    )
+
+    @api.constrains('aso_cargo_migrado', 'convenio_principal', 'aso_cargo_otro', 'convenio_otro')
     def _check_convenios(self):
         for rec in self:
-            if rec.convenio_principal and rec.aso_cargo != 'Si':
+            if rec.convenio_principal and rec.aso_cargo_migrado != 'Si':
                 raise ValidationError(
-                    "Solo se puede llenar 'Convenio Principal' cuando 'Cargo Asociacion' es 'Si'."
+                    "Solo se puede llenar 'Convenio Principal' cuando 'Cargo Migrado' es 'Si'."
                 )
             if rec.convenio_otro and rec.aso_cargo_otro != 'Si':
                 raise ValidationError(
@@ -45,4 +59,13 @@ class AccountJournal(models.Model):
                 raise ValidationError(
                     "Ya existe el Diario '%s' marcado como 'Cargo Automatico Asociacion' "
                     "para esta compañía. Solo puede haber uno." % otros[0].name
+                )
+
+    @api.constrains('aso_cargo_automatico', 'aso_cargo_migrado')
+    def _check_automatico_migrado_excluyentes(self):
+        for rec in self:
+            if rec.aso_cargo_automatico == 'Si' and rec.aso_cargo_migrado == 'Si':
+                raise ValidationError(
+                    "Un diario no puede tener 'Cargo Automatico Asociacion' y 'Cargo "
+                    "Migrado' en 'Si' al mismo tiempo: son procesos distintos y excluyentes."
                 )

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_residencia_config_html" model="ir.actions.report">
+        <field name="name">Configuración de Residencias</field>
+        <field name="model">asovec.residencia_config_wizard</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">iit_asovec.report_residencia_config_document</field>
+        <field name="report_file">iit_asovec.report_residencia_config_document</field>
+        <field name="binding_model_id" eval="False" />
+    </record>
+
+    <template id="report_residencia_config_document">
+        <html>
+            <head>
+                <meta charset="utf-8" />
+                <title>Configuración de Residencias</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+                        background: #f4f5f7;
+                        color: #2b2b2b;
+                        margin: 0;
+                        padding: 24px;
+                    }
+                    .container { max-width: 1400px; margin: 0 auto; }
+                    .header {
+                        background: #ffffff;
+                        border-radius: 10px;
+                        padding: 20px 24px;
+                        margin-bottom: 16px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                    }
+                    .header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+                    .header table { border-collapse: collapse; }
+                    .header td { vertical-align: middle; padding: 0; }
+                    .header img { max-height: 70px; padding-right: 20px; }
+                    .header h1 { font-size: 20px; margin: 0 0 4px 0; color: #1a1a1a; }
+                    .header .subtitulo { color: #666; font-size: 14px; }
+
+                    .toolbar { display: flex; gap: 8px; }
+                    .btn-download {
+                        display: inline-block;
+                        text-decoration: none;
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        color: #fff;
+                        cursor: pointer;
+                    }
+                    .btn-excel { background: #2e7d32; }
+
+                    .generated-note {
+                        background: #fff8e1;
+                        border-left: 4px solid #b8860b;
+                        border-radius: 6px;
+                        padding: 10px 16px;
+                        margin-bottom: 20px;
+                        font-size: 12.5px;
+                        color: #6b5200;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                    }
+
+                    .kpi-grid { margin-bottom: 20px; }
+                    .kpi-card {
+                        display: inline-block;
+                        vertical-align: top;
+                        width: 180px;
+                        background: #ffffff;
+                        border-radius: 8px;
+                        padding: 14px 16px;
+                        margin: 0 8px 8px 0;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                        border-left: 4px solid #009999;
+                    }
+                    .kpi-card .kpi-label { font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: .04em; }
+                    .kpi-card .kpi-value { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-top: 4px; }
+
+                    .section-title {
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #444;
+                        margin: 0 0 10px 2px;
+                        text-transform: uppercase;
+                        letter-spacing: .03em;
+                    }
+
+                    .tab-content {
+                        background: #ffffff;
+                        border-radius: 8px;
+                        padding: 18px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                        margin-bottom: 30px;
+                        overflow-x: auto;
+                    }
+
+                    table.tabla-datos { width: 100%; border-collapse: collapse; font-size: 12px; }
+                    table.tabla-datos th {
+                        background: #009999;
+                        color: #fff;
+                        padding: 8px 10px;
+                        text-align: right;
+                        white-space: nowrap;
+                    }
+                    table.tabla-datos th.text-left { text-align: left; }
+                    table.tabla-datos td { padding: 6px 10px; text-align: right; border-bottom: 1px solid #eee; white-space: nowrap; }
+                    table.tabla-datos td.text-left { text-align: left; }
+                    table.tabla-datos tbody tr:nth-child(even) { background: #fafafa; }
+                    table.tabla-datos tbody tr:hover { background: #f0f7f7; }
+
+                    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; color: #fff; }
+                    .badge-success { background: #2e7d32; }
+                    .badge-danger { background: #c62828; }
+                    .badge-muted { background: #9e9e9e; }
+                    .badge-purple { background: #6a1b9a; }
+                    .no-paga-tag { color: #c62828; font-size: 10px; font-weight: 600; }
+
+                    @media print {
+                        body { background: #fff; padding: 0; }
+                        .tab-content { box-shadow: none; }
+                        .toolbar { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <main class="container">
+                    <div class="header">
+                        <div class="header-row">
+                            <table>
+                                <tr>
+                                    <td t-if="logo_b64">
+                                        <img t-att-src="'data:image/png;base64,%s' % logo_b64" />
+                                    </td>
+                                    <td>
+                                        <h1>Configuración de Residencias</h1>
+                                        <div class="subtitulo">
+                                            <t t-esc="', '.join(proyectos.mapped('name'))" /> — <t t-esc="company.name" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="toolbar">
+                                <a class="btn-download btn-excel"
+                                    t-attf-href="/asovec/residencia_config/#{docs.id}/xlsx"
+                                    target="_blank">Descargar Excel</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="generated-note">
+                        Documento generado el <strong t-esc="generated_at" />, con la configuración vigente en ese momento.
+                    </div>
+
+                    <div class="section-title">Resumen</div>
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Residencias</div>
+                            <div class="kpi-value"><t t-esc="resumen['cantidad_residencias']" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Sin canon de agua</div>
+                            <div class="kpi-value"><t t-esc="resumen['cantidad_sin_canon']" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Exoneradas de exceso</div>
+                            <div class="kpi-value"><t t-esc="resumen['cantidad_exoneradas']" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Inactivas</div>
+                            <div class="kpi-value"><t t-esc="resumen['cantidad_inactivas']" /></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">No pagan servicios</div>
+                            <div class="kpi-value"><t t-esc="resumen['cantidad_no_paga_servicios']" /></div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Detalle por residencia</div>
+                    <div class="tab-content">
+                        <table class="tabla-datos">
+                            <thead>
+                                <tr>
+                                    <th class="text-left">Proyecto</th>
+                                    <th class="text-left">Residencia</th>
+                                    <th class="text-left">Dirección</th>
+                                    <th class="text-left">Residente</th>
+                                    <th class="text-left">Canon de agua</th>
+                                    <th class="text-left">Exceso exonerado</th>
+                                    <t t-foreach="servicios_nombres" t-as="servicio_nombre">
+                                        <th class="text-left"><t t-esc="servicio_nombre" /></th>
+                                    </t>
+                                    <th class="text-left">Contador inactivo</th>
+                                    <th class="text-left">Contador</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="filas" t-as="f">
+                                    <t t-set="fsym" t-value="(f['currency'] and f['currency'].symbol) or (currency and currency.symbol) or ''" />
+                                    <tr>
+                                        <td class="text-left"><t t-esc="f['proyecto'].name" /></td>
+                                        <td class="text-left">
+                                            <t t-esc="f['residencia'].name" />
+                                            <div t-if="f['no_paga_servicios']" class="no-paga-tag">No paga servicios</div>
+                                        </td>
+                                        <td class="text-left"><t t-esc="f['direccion'] or ''" /></td>
+                                        <td class="text-left"><t t-esc="f['residente'].name or ''" /></td>
+                                        <td class="text-left">
+                                            <span t-if="f['canon_paga']" class="badge badge-success">
+                                                <t t-esc="'Sí (%s)' % ('propio' if f['canon_propio'] else 'proyecto')" />
+                                            </span>
+                                            <span t-else="" class="badge badge-muted">No</span>
+                                            <t t-if="f['canon_paga']"> — <t t-esc="'%s %s' % (fsym, '{:,.2f}'.format(f['canon_valor']))" /></t>
+                                        </td>
+                                        <td class="text-left">
+                                            <span t-attf-class="badge #{f['exonera_exceso'] and 'badge-purple' or 'badge-muted'}">
+                                                <t t-esc="f['exonera_exceso'] and 'Sí' or 'No'" />
+                                            </span>
+                                        </td>
+                                        <t t-foreach="servicios_nombres" t-as="servicio_nombre">
+                                            <t t-set="info" t-value="f['servicios'].get(servicio_nombre, {})" />
+                                            <td class="text-left">
+                                                <span t-if="info.get('estado') == 'paga'" t-esc="'%s %s' % (fsym, '{:,.2f}'.format(info['precio']))" />
+                                                <span t-elif="info.get('estado') == 'no_paga'" class="badge badge-muted">No</span>
+                                                <span t-elif="info.get('estado') == 'no_aplica'" class="badge badge-muted">No aplica (inactiva)</span>
+                                                <t t-else="">—</t>
+                                            </td>
+                                        </t>
+                                        <td class="text-left">
+                                            <span t-if="f['cobra_inactivo']" class="badge badge-danger">
+                                                <t t-esc="'Sí — %s %s' % (fsym, '{:,.2f}'.format(f['valor_inactivo']))" />
+                                            </span>
+                                            <span t-else="" class="badge badge-muted">No (activa)</span>
+                                        </td>
+                                        <td class="text-left"><t t-esc="f['contador'].name if f['contador'] else '—'" /></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </main>
+            </body>
+        </html>
+    </template>
+</odoo>

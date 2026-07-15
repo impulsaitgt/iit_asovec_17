@@ -11,25 +11,35 @@ class ReportEstadoCuenta(models.AbstractModel):
     _name = "report.iit_asovec.report_estado_cuenta_document"
     _description = "Estado de Cuenta (documento)"
 
-    def _movimiento_cargo(self, move, origen, residencia, cliente):
+    def _tipo_label_cargo(self, journal):
+        if journal.aso_cargo_migrado == "Si":
+            return "Cargo Migrado"
+        if journal.aso_cargo_automatico == "Si":
+            return "Cargo Automático"
+        return "Cargo"
+
+    def _movimiento_cargo(self, move, residencia, cliente):
         return {
             "date": move.invoice_date or move.date,
+            "datetime": move.create_date,
             "tipo": "Cargo",
-            "origen": origen,
+            "tipo_label": self._tipo_label_cargo(move.journal_id),
             "residencia": residencia,
             "move": move,
             "move_name": move.name,
+            "referencia_cliente": move.ref or "",
             "pago_ref": False,
             "pago_move": False,
             "pago_payment": False,
             "journal": move.journal_id,
-            "aso_cargo": move.journal_id.aso_cargo,
+            "aso_cargo": "Si" if (move.journal_id.aso_cargo_migrado == "Si" or move.journal_id.aso_cargo_automatico == "Si") else "No",
             "aso_cargo_automatico": move.journal_id.aso_cargo_automatico,
             "cliente": cliente,
             "currency": move.currency_id,
             "debe": move.amount_total,
             "haber": 0.0,
             "state": move.state,
+            "aplicado": True,
         }
 
     def _movimientos_pago(self, move, residencia):
@@ -42,11 +52,13 @@ class ReportEstadoCuenta(models.AbstractModel):
             aml = reconciled["aml"]
             movimientos.append({
                 "date": aml.date,
+                "datetime": aml.create_date,
                 "tipo": "Pago",
-                "origen": "Pago",
+                "tipo_label": "Pago",
                 "residencia": residencia,
                 "move": move,
                 "move_name": move.name,
+                "referencia_cliente": aml.payment_id.payment_reference or aml.move_id.ref or "",
                 "pago_ref": aml.move_id.name,
                 "pago_move": aml.move_id,
                 "pago_payment": aml.payment_id,
@@ -58,37 +70,87 @@ class ReportEstadoCuenta(models.AbstractModel):
                 "debe": 0.0,
                 "haber": abs(reconciled["amount"]),
                 "state": "posted",
+                "aplicado": True,
             })
         return movimientos
 
-    def _movimientos_residencia(self, wizard, residencia):
+    def _movimientos_credito_sin_aplicar(self, wizard, residencia):
+        """Recibos/pagos ya posteados que no están conciliados contra ninguna
+        factura (crédito a favor del residente): p.ej. se operó el recibo del
+        banco pero todavía no se le asoció ningún cargo. No hay un campo que
+        ligue el pago a una residencia específica (solo al cliente), así que el
+        llamador debe incluir esto una sola vez por reporte, no por residencia."""
+        cliente = wizard.cliente_id
+        if not cliente:
+            return []
+        pagos = self.env["account.payment"].search([
+            ("partner_id", "=", cliente.id),
+            ("payment_type", "=", "inbound"),
+            ("state", "=", "posted"),
+            ("is_reconciled", "=", False),
+        ])
+        movimientos = []
+        for pago in pagos:
+            movimientos.append({
+                "date": pago.date,
+                "datetime": pago.create_date,
+                "tipo": "Pago",
+                "tipo_label": "Pago",
+                "residencia": residencia,
+                "move": False,
+                "move_name": "",
+                "referencia_cliente": pago.payment_reference or "",
+                "pago_ref": pago.name,
+                "pago_move": pago.move_id,
+                "pago_payment": pago,
+                "journal": pago.journal_id,
+                "aso_cargo": False,
+                "aso_cargo_automatico": False,
+                "cliente": cliente,
+                "currency": pago.currency_id,
+                "debe": 0.0,
+                "haber": pago.amount,
+                "state": "posted",
+                "aplicado": False,
+            })
+        return movimientos
+
+    def _movimientos_residencia(self, wizard, residencia, incluir_creditos_sueltos=False):
         """Arma el libro de movimientos (cargos y pagos reales) de una residencia,
-        ordenados cronológicamente, con saldo acumulado, para poder ver todo el
-        historial aunque el saldo final sea cero."""
+        ordenados cronológicamente (fecha y, dentro del mismo día, por hora real de
+        creación), con saldo acumulado, para poder ver todo el historial aunque el
+        saldo final sea cero."""
         entradas = []
         moves_incluidos = self.env["account.move"]
 
         for line in wizard._get_cobro_lines_residencia(residencia):
             move = line.move_id
-            entradas.append(self._movimiento_cargo(move, "Cargo Mensual", residencia, line.cliente_id))
+            entradas.append(self._movimiento_cargo(move, residencia, line.cliente_id))
             moves_incluidos |= move
 
+        # Solo facturas reales (no notas de crédito): una nota de crédito no es un
+        # cargo nuevo, es un abono/reversión que ya aparece como "Pago" al conciliarse
+        # contra la factura que afecta (más abajo, vía _movimientos_pago).
         domain_migradas = [
             ("residencia_id", "=", residencia.id),
             ("state", "=", "posted"),
+            ("move_type", "=", "out_invoice"),
             ("id", "not in", moves_incluidos.ids),
         ]
         if wizard.solo_residente_actual and wizard.cliente_id:
             domain_migradas.append(("partner_id", "=", wizard.cliente_id.id))
         moves_migrados = self.env["account.move"].search(domain_migradas, order="invoice_date, id")
         for move in moves_migrados:
-            entradas.append(self._movimiento_cargo(move, "Deuda Migrada", residencia, move.partner_id))
+            entradas.append(self._movimiento_cargo(move, residencia, move.partner_id))
             moves_incluidos |= move
 
         for move in moves_incluidos:
             entradas += self._movimientos_pago(move, residencia)
 
-        entradas.sort(key=lambda e: (e["date"] or fields.Date.today(), 0 if e["tipo"] == "Cargo" else 1))
+        if incluir_creditos_sueltos:
+            entradas += self._movimientos_credito_sin_aplicar(wizard, residencia)
+
+        entradas.sort(key=lambda e: (e["date"] or fields.Date.today(), e["datetime"] or fields.Datetime.now()))
 
         saldo = 0.0
         for entrada in entradas:
@@ -112,8 +174,8 @@ class ReportEstadoCuenta(models.AbstractModel):
         residencias = wizard.residencia_ids
 
         movimientos = []
-        for residencia in residencias:
-            movimientos += self._movimientos_residencia(wizard, residencia)
+        for index, residencia in enumerate(residencias):
+            movimientos += self._movimientos_residencia(wizard, residencia, incluir_creditos_sueltos=(index == 0))
 
         cargos = [m for m in movimientos if m["tipo"] == "Cargo"]
         resumen = {
@@ -124,7 +186,7 @@ class ReportEstadoCuenta(models.AbstractModel):
             "total_saldo": sum(m["debe"] - m["haber"] for m in movimientos),
             "cantidad_asociacion": len([m for m in cargos if m["aso_cargo"] == "Si"]),
             "cantidad_automatico": len([m for m in cargos if m["aso_cargo_automatico"] == "Si"]),
-            "cantidad_migrada": len([m for m in cargos if m["origen"] == "Deuda Migrada"]),
+            "cantidad_sin_aplicar": len([m for m in movimientos if m["tipo"] == "Pago" and not m["aplicado"]]),
         }
 
         currency = (movimientos[0]["currency"] if movimientos else False) or wizard.env.company.currency_id

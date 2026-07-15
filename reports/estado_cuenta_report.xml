@@ -36,6 +36,7 @@
               hasta la fecha y hora de generación indicada arriba; movimientos posteriores no
               están reflejados.
               <t t-if="solo_residente_actual"> Se muestran únicamente los movimientos del residente actual.</t>
+              <t t-if="resumen['cantidad_sin_aplicar']"> <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#c62828;"></span> Pago no conciliado a ningún cargo (crédito a favor).</t>
             </div>
 
             <!-- Moneda base -->
@@ -47,9 +48,9 @@
                   <th>Fecha</th>
                   <th t-if="len(residencias) &gt; 1">Residencia</th>
                   <th>Tipo</th>
-                  <th>Origen</th>
                   <th>Cargo/Pago</th>
                   <th>Diario</th>
+                  <th>Referencia Cliente</th>
                   <th class="text-end">Debe</th>
                   <th class="text-end">Haber</th>
                   <th class="text-end">Saldo</th>
@@ -61,10 +62,14 @@
                   <tr>
                     <td><span t-esc="m['date'] and m['date'].strftime('%d/%m/%Y') or ''"/></td>
                     <td t-if="len(residencias) &gt; 1"><span t-esc="m['residencia'].name"/></td>
-                    <td><span t-esc="m['tipo']"/></td>
-                    <td><span t-esc="m['origen']"/></td>
-                    <td><span t-esc="m['move_name'] or m['pago_ref'] or ''"/></td>
+                    <td><span t-esc="m['tipo_label']"/></td>
+                    <td>
+                      <span t-esc="m['move_name'] or m['pago_ref'] or ''"/>
+                      <span t-if="m['tipo'] == 'Pago' and not m['aplicado']"
+                        style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#c62828; margin-left:5px;"></span>
+                    </td>
                     <td><span t-esc="m['journal'].name if m['journal'] else ''"/></td>
+                    <td><span t-esc="m['referencia_cliente'] or ''"/></td>
                     <td class="text-end">
                       <span t-esc="m['debe'] and ('%s %s' % (msym, '{:,.2f}'.format(m['debe']))).strip() or ''"/>
                     </td>

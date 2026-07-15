@@ -83,7 +83,6 @@
                     .kpi-card.pagado { border-left-color: #2e7d32; }
                     .kpi-card.asociacion { border-left-color: #6a1b9a; }
                     .kpi-card.automatico { border-left-color: #0277bd; }
-                    .kpi-card.migrada { border-left-color: #b8860b; }
 
                     .section-title {
                         font-size: 14px;
@@ -124,10 +123,18 @@
                     .badge-danger { background: #c62828; }
                     .badge-muted { background: #9e9e9e; }
                     .badge-warning { background: #b8860b; }
-                    .badge-purple { background: #6a1b9a; }
                     .badge-blue { background: #0277bd; }
-                    .badge-gold { background: #b8860b; }
                     .badge-green { background: #2e7d32; }
+                    .sin-aplicar-flag {
+                        display: inline-block;
+                        width: 9px;
+                        height: 9px;
+                        border-radius: 50%;
+                        background: #c62828;
+                        margin-left: 6px;
+                        vertical-align: middle;
+                        cursor: help;
+                    }
 
                     @media print {
                         body { background: #fff; padding: 0; }
@@ -172,6 +179,9 @@
                         movimientos (cargos y pagos aplicados) con saldo acumulado, hasta ese momento;
                         movimientos posteriores a esta fecha y hora no están reflejados aquí.
                         <t t-if="solo_residente_actual"> Se muestran únicamente los movimientos del residente actual.</t>
+                        <t t-if="resumen['cantidad_sin_aplicar']">
+                            <span class="sin-aplicar-flag" style="margin-left: 0; margin-right: 6px;"></span>Pago no conciliado a ningún cargo (crédito a favor).
+                        </t>
                     </div>
 
                     <div class="section-title">Resumen</div>
@@ -204,10 +214,6 @@
                             <div class="kpi-label">Cargos Automáticos</div>
                             <div class="kpi-value"><t t-esc="resumen['cantidad_automatico']" /></div>
                         </div>
-                        <div class="kpi-card migrada">
-                            <div class="kpi-label">Deuda Migrada</div>
-                            <div class="kpi-value"><t t-esc="resumen['cantidad_migrada']" /></div>
-                        </div>
                     </div>
 
                     <div class="section-title">Movimientos (cargos y pagos)</div>
@@ -218,11 +224,9 @@
                                     <th class="text-left">Fecha</th>
                                     <th class="text-left" t-if="len(residencias) &gt; 1">Residencia</th>
                                     <th class="text-left">Tipo</th>
-                                    <th class="text-left">Origen</th>
                                     <th class="text-left">Cargo / Pago</th>
                                     <th class="text-left">Diario</th>
-                                    <th class="text-left">Cargo Asociación</th>
-                                    <th class="text-left">Automático</th>
+                                    <th class="text-left">Referencia Cliente</th>
                                     <th>Debe</th>
                                     <th>Haber</th>
                                     <th>Saldo Acumulado</th>
@@ -236,12 +240,7 @@
                                         <td class="text-left" t-if="len(residencias) &gt; 1"><t t-esc="m['residencia'].name" /></td>
                                         <td class="text-left">
                                             <span t-attf-class="badge #{m['tipo'] == 'Pago' and 'badge-green' or 'badge-blue'}">
-                                                <t t-esc="m['tipo']" />
-                                            </span>
-                                        </td>
-                                        <td class="text-left">
-                                            <span t-attf-class="badge #{m['origen'] == 'Deuda Migrada' and 'badge-gold' or 'badge-muted'}">
-                                                <t t-esc="m['origen']" />
+                                                <t t-esc="m['tipo_label']" />
                                             </span>
                                         </td>
                                         <td class="text-left">
@@ -255,18 +254,11 @@
                                                 t-attf-href="/web#id=#{m['pago_move'].id}&amp;model=account.move&amp;view_type=form"
                                                 target="_blank" class="badge-link"><t t-esc="m['pago_ref']" /></a>
                                             <t t-else="">—</t>
+                                            <span t-if="m['tipo'] == 'Pago' and not m['aplicado']"
+                                                class="sin-aplicar-flag" title="Pago no conciliado a ningún cargo (crédito a favor)"></span>
                                         </td>
                                         <td class="text-left"><t t-esc="m['journal'].name if m['journal'] else '—'" /></td>
-                                        <td class="text-left">
-                                            <span t-if="m['tipo'] == 'Cargo'" t-attf-class="badge #{m['aso_cargo'] == 'Si' and 'badge-purple' or 'badge-muted'}">
-                                                <t t-esc="m['aso_cargo'] == 'Si' and 'Sí' or 'No'" />
-                                            </span>
-                                        </td>
-                                        <td class="text-left">
-                                            <span t-if="m['tipo'] == 'Cargo'" t-attf-class="badge #{m['aso_cargo_automatico'] == 'Si' and 'badge-blue' or 'badge-muted'}">
-                                                <t t-esc="m['aso_cargo_automatico'] == 'Si' and 'Sí' or 'No'" />
-                                            </span>
-                                        </td>
+                                        <td class="text-left"><t t-esc="m['referencia_cliente'] or '—'" /></td>
                                         <td><t t-if="m['debe']" t-esc="'%s %s' % (msym, '{:,.2f}'.format(m['debe']))" /></td>
                                         <td><t t-if="m['haber']" t-esc="'%s %s' % (msym, '{:,.2f}'.format(m['haber']))" /></td>
                                         <td><strong t-esc="'%s %s' % (msym, '{:,.2f}'.format(m['saldo_acumulado']))" /></td>
@@ -275,7 +267,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td t-attf-colspan="#{len(residencias) &gt; 1 and 8 or 7}" class="text-left">Totales</td>
+                                    <td t-attf-colspan="#{len(residencias) &gt; 1 and 6 or 5}" class="text-left">Totales</td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_facturado'])" /></td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_pagado'])" /></td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_saldo'])" /></td>

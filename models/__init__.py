@@ -23,3 +23,5 @@ from . import lectura_operador_wizard
 from . import proceso_lecturas_csv_wizard
 from . import lectura_listado_wizard
 from . import cargo_residencia_report
+from . import residencia_config_wizard
+from . import residencia_config_report

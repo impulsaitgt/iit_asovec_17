@@ -28,9 +28,8 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
     journal_ids = fields.Many2many(
         "account.journal", string="Diarios", required=True,
         help="Diarios a considerar para calcular la deuda (mes y anteriores). Por "
-             "defecto sugiere el diario 'Cargo Asociacion = Si', pero se puede cambiar "
-             "o agregar otros (por ejemplo, si se cargaron deudas migradas en un diario "
-             "distinto).",
+             "defecto sugiere los diarios 'Cargo Automatico Asociacion = Si' y 'Cargo "
+             "Migrado = Si', pero se puede cambiar o agregar otros.",
     )
     file_data = fields.Binary(string="Archivo CSV", readonly=True)
     file_name = fields.Char(string="Nombre de archivo", readonly=True)
@@ -45,8 +44,8 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
             res["anio"] = anio
         if "journal_ids" in fields_list and not res.get("journal_ids"):
             journal_aso = self.env["account.journal"].search([
-                ("aso_cargo", "=", "Si"),
-                ("company_id", "=", self.env.company.id),
+                "&", ("company_id", "=", self.env.company.id),
+                "|", ("aso_cargo_migrado", "=", "Si"), ("aso_cargo_automatico", "=", "Si"),
             ])
             if journal_aso:
                 res["journal_ids"] = [(6, 0, journal_aso.ids)]
