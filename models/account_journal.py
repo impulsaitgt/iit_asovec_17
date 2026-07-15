@@ -11,12 +11,6 @@ class AccountJournal(models.Model):
     aso_cargo_otro = fields.Selection([('No', 'No'), ('Si', 'Si')], default='No', string='Cargo Asociacion Otro')
     convenio_otro = fields.Char(string='Convenio Otro')
 
-    diario_relacionado_id = fields.Many2one(
-        'account.journal',
-        string='Diario Relacionado',
-        domain="[('type', 'in', ('cash', 'bank'))]",
-    )
-
     @api.constrains('aso_cargo', 'convenio_principal', 'aso_cargo_otro', 'convenio_otro')
     def _check_convenios(self):
         for rec in self:

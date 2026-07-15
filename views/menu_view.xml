@@ -151,8 +151,6 @@
         parent="procesos_menu" action="proceso_recibo_masivo_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
     <menuitem name="Generar CSV de Estado de Cuenta (Banco)" id="proceso_estado_cuenta_csv_opcion"
         parent="procesos_menu" action="proceso_estado_cuenta_csv_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
-    <menuitem name="Carga de pagos del Banco" id="proceso_carga_pagos_banco_opcion"
-        parent="procesos_menu" action="action_proceso_carga_pagos_banco_wizard" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
 
     <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="60" />
     <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"
@@ -171,11 +169,5 @@
     <menuitem name="Generar CSV de Lecturas (Todos los Proyectos)" id="proceso_lecturas_csv_opcion"
         parent="exportaciones_menu" action="proceso_lecturas_csv_wizard_action"
         groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_operador_lecturas" />
-
-    <!-- Al final: carga inicial/migración, se usa una vez por residencia, no es
-         parte del ciclo mensual recurrente ni del catálogo que se mantiene. -->
-    <menuitem name="Migración" id="migracion_menu" parent="asovec_menu" sequence="70" />
-    <menuitem name="Cargar Deudas/Facturas Anteriores" id="proceso_carga_deudas_opcion"
-        parent="migracion_menu" action="action_proceso_carga_deudas_wizard" groups="asovec_group_administrador" />
 
 </odoo>
