@@ -7,17 +7,30 @@
       <field name="name">asovec.cobro_mensual_consulta_wizard.form</field>
       <field name="model">asovec.cobro_mensual_consulta_wizard</field>
       <field name="arch" type="xml">
-        <form string="Consulta de cobros mensuales">
+        <form string="Estado de Cuenta">
           <sheet>
             <group>
+              <field name="buscar_cliente_id" string="Buscar por Residente"
+                help="Úselo si no conoce el proyecto o la residencia: sugiere automáticamente todas sus residencias."/>
               <field name="proyecto_aso_id"/>
-              <field name="residencia_id"/>
+              <field name="residencia_ids" widget="many2many_tags"
+                options="{'no_create': True}"/>
               <field name="cliente_id" string="Residente" readonly="1"/>
-              <field name="solo_residente_actual" invisible="not residencia_id"/>
+              <field name="solo_residente_actual" invisible="not residencia_ids"/>
+            </group>
+
+            <group invisible="not file_data">
+              <field name="file_name" invisible="1"/>
+              <field name="file_data"
+                filename="file_name"
+                widget="binary"
+                readonly="1"
+                string="Archivo Excel generado"/>
             </group>
 
             <footer>
-              <button name="action_consultar" type="object" string="Consultar" class="btn-primary"/>
+              <button name="action_generar" type="object" string="Generar" class="btn-primary"/>
+              <button name="action_generar_excel" type="object" string="Generar Excel" class="btn-secondary"/>
               <button name="action_print_pdf" type="object" string="Imprimir PDF" class="btn-secondary"/>
               <button string="Cerrar" special="cancel" class="btn-secondary"/>
             </footer>

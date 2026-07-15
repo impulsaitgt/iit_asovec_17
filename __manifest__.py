@@ -37,6 +37,7 @@
         'views/account_move_view.xml',
         'views/menu_view.xml',
         'reports/estado_cuenta_report.xml',
+        'reports/estado_cuenta_html_report.xml',
         'reports/estado_cuenta_residencia_lecturas_report.xml',
         'reports/recibo_residencia_mensual_report.xml',
         'reports/recibo_residencia_mensual_masivo_report.xml',
