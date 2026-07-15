@@ -109,6 +109,11 @@ class CobroMensualConsultaWizard(models.TransientModel):
             ("residencia_id", "=", residencia.id),
             ("cobro_id.state", "=", "posted"),
             ("move_id", "!=", False),
+            # El estado del cobro mensual (el mes completo) no se sincroniza
+            # automáticamente si alguien resetea a borrador o cancela una factura
+            # individual desde Contabilidad, así que se revisa también el estado
+            # real de la factura de esta línea, no solo el del cobro.
+            ("move_id.state", "=", "posted"),
         ]
         if self.solo_residente_actual and self.cliente_id:
             domain.append(("cliente_id", "=", self.cliente_id.id))
@@ -133,23 +138,26 @@ class CobroMensualConsultaWizard(models.TransientModel):
         })
         fmt_dinero = workbook.add_format({"num_format": "#,##0.00"})
         fmt_fecha = workbook.add_format({"num_format": "dd/mm/yyyy"})
+        fmt_dot = workbook.add_format({"font_color": "#c62828", "bold": True})
 
         worksheet.set_column(0, 0, 12)
         worksheet.set_column(1, 1, 22)
-        worksheet.set_column(2, 2, 12)
+        worksheet.set_column(2, 2, 16)
         worksheet.set_column(3, 3, 18)
-        worksheet.set_column(4, 4, 18)
-        worksheet.set_column(5, 6, 16)
-        worksheet.set_column(7, 7, 26)
-        worksheet.set_column(8, 11, 14)
+        worksheet.set_column(4, 4, 16)
+        worksheet.set_column(5, 5, 26)
+        worksheet.set_column(6, 9, 14)
 
         worksheet.write(0, 0, "Estado de Cuenta", fmt_titulo)
         worksheet.write(1, 0, "%s — Generado: %s" % (datos["cliente"].name or "", datos["generated_at"]), fmt_subtitulo)
+        row = 2
+        if datos["resumen"]["cantidad_sin_aplicar"]:
+            worksheet.write_rich_string(row, 0, fmt_dot, "●", "  Pago no conciliado a ningún cargo (crédito a favor).", fmt_subtitulo)
 
         row = 3
         encabezados = [
-            "Fecha", "Residencia", "Tipo", "Origen", "Cargo/Pago", "Diario",
-            "Cargo Asociación", "Automático", "Debe", "Haber", "Saldo Acumulado", "Estado",
+            "Fecha", "Residencia", "Tipo", "Cargo/Pago", "Diario",
+            "Referencia Cliente", "Debe", "Haber", "Saldo Acumulado", "Estado",
         ]
         for col, texto in enumerate(encabezados):
             worksheet.write(row, col, texto, fmt_header)
@@ -159,16 +167,18 @@ class CobroMensualConsultaWizard(models.TransientModel):
         for mov in datos["movimientos"]:
             worksheet.write_datetime(row, 0, mov["date"], fmt_fecha) if mov["date"] else worksheet.write(row, 0, "")
             worksheet.write(row, 1, mov["residencia"].name or "")
-            worksheet.write(row, 2, mov["tipo"])
-            worksheet.write(row, 3, mov["origen"])
-            worksheet.write(row, 4, mov["move_name"] or mov.get("pago_ref") or "")
-            worksheet.write(row, 5, mov["journal"].name if mov["journal"] else "")
-            worksheet.write(row, 6, "Sí" if mov["aso_cargo"] == "Si" else "No")
-            worksheet.write(row, 7, "Sí" if mov["aso_cargo_automatico"] == "Si" else "No")
-            worksheet.write(row, 8, mov["debe"], fmt_dinero)
-            worksheet.write(row, 9, mov["haber"], fmt_dinero)
-            worksheet.write(row, 10, mov["saldo_acumulado"], fmt_dinero)
-            worksheet.write(row, 11, mov["state"] or "")
+            worksheet.write(row, 2, mov["tipo_label"])
+            ref = mov["move_name"] or mov.get("pago_ref") or ""
+            if mov["tipo"] == "Pago" and not mov["aplicado"]:
+                worksheet.write_rich_string(row, 3, ref + "  ", fmt_dot, "●")
+            else:
+                worksheet.write(row, 3, ref)
+            worksheet.write(row, 4, mov["journal"].name if mov["journal"] else "")
+            worksheet.write(row, 5, mov["referencia_cliente"] or "")
+            worksheet.write(row, 6, mov["debe"], fmt_dinero)
+            worksheet.write(row, 7, mov["haber"], fmt_dinero)
+            worksheet.write(row, 8, mov["saldo_acumulado"], fmt_dinero)
+            worksheet.write(row, 9, mov["state"] or "")
             row += 1
 
         worksheet.freeze_panes(header_row + 1, 0)

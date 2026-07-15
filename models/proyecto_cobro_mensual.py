@@ -5,6 +5,7 @@ import io
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from .account_move import CTX_SKIP_CARGO_AUTOMATICO_CHECK
 from .contador import mes_anio_anterior
 
 
@@ -592,7 +593,15 @@ class ProyectoCobroMensual(models.Model):
             })
             return False
 
-        move = self.env["account.move"].create({
+        # El account.move se crea aquí, ANTES que el asovec.proyecto_cobro_mensual_line
+        # que lo referencia (unas líneas más abajo), así que se exime del chequeo que
+        # exige que un cargo del diario "Cargo Automatico Asociacion" ya tenga su
+        # detalle de cobro mensual (ese detalle todavía no existe en este punto). No
+        # hace falta eximir el chequeo de "Cargo Migrado": ese diario es excluyente con
+        # "Cargo Automatico Asociacion", así que nunca aplica aquí.
+        move = self.env["account.move"].with_context(**{
+            CTX_SKIP_CARGO_AUTOMATICO_CHECK: True,
+        }).create({
             "move_type": "out_invoice",
             "company_id": self.company_id.id,
             "journal_id": journal.id,
@@ -966,14 +975,21 @@ class ProyectoCobroMensualLine(models.Model):
     journal_id = fields.Many2one(
         "account.journal", related="move_id.journal_id", string="Diario", store=True, readonly=True,
     )
-    aso_cargo = fields.Selection(
-        related="journal_id.aso_cargo", string="Cargo Asociación", readonly=True,
-        help="Indica si el diario del cargo está marcado como 'Cargo Asociacion'.",
-    )
     aso_cargo_automatico = fields.Selection(
         related="journal_id.aso_cargo_automatico", string="Cargo Automático Asociación", readonly=True,
         help="Indica si el diario del cargo es el diario único usado por el proceso de Cobros Mensuales.",
     )
+    aso_cargo = fields.Selection(
+        [('No', 'No'), ('Si', 'Si')], compute="_compute_aso_cargo", string="Cargo Asociación", store=False,
+        help="Indica si el diario del cargo es de asociación: el automático de Cobros "
+             "Mensuales o el de Cargo Migrado.",
+    )
+
+    @api.depends("journal_id.aso_cargo_automatico", "journal_id.aso_cargo_migrado")
+    def _compute_aso_cargo(self):
+        for rec in self:
+            journal = rec.journal_id
+            rec.aso_cargo = "Si" if (journal.aso_cargo_automatico == "Si" or journal.aso_cargo_migrado == "Si") else "No"
 
     currency_id = fields.Many2one("res.currency", related="move_id.currency_id", store=True, readonly=True)
 

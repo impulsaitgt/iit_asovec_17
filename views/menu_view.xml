@@ -160,6 +160,8 @@
         action="action_asovec_estado_cuenta_analisis" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
     <menuitem name="Análisis Mensual de la Asociación" id="proceso_analisis_mensual_opcion"
         parent="consultas_menu" action="proceso_analisis_mensual_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_temporal_implementacion" />
+    <menuitem name="Configuración de Residencias" id="residencia_config_opcion"
+        parent="consultas_menu" action="residencia_config_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
 
     <!-- Exportaciones a archivo, separadas de "Consultas" (que son reportes en
          pantalla) para no mezclar ambos tipos de acción en el mismo menú. -->

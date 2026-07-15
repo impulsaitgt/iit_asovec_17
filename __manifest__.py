@@ -6,7 +6,7 @@
     """,
     'author':'Alexander Paiz',
     'category': 'General',
-    'version' : '1.0.3',
+    'version' : '1.0.4',
     'depends': [
         'base', 'product', 'account'
     ],
@@ -35,6 +35,7 @@
         'views/proceso_lecturas_csv_wizard_view.xml',
         'views/lectura_listado_wizard_view.xml',
         'views/account_move_view.xml',
+        'views/residencia_config_wizard_view.xml',
         'views/menu_view.xml',
         'reports/estado_cuenta_report.xml',
         'reports/estado_cuenta_html_report.xml',
@@ -42,7 +43,8 @@
         'reports/recibo_residencia_mensual_report.xml',
         'reports/recibo_residencia_mensual_masivo_report.xml',
         'reports/analisis_mensual_report.xml',
-        'reports/cargo_residencia_report.xml'
+        'reports/cargo_residencia_report.xml',
+        'reports/residencia_config_html_report.xml'
     ],
     'assets': {
         'web.assets_backend': [
