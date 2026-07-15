@@ -377,11 +377,15 @@ class ProyectoCobroMensual(models.Model):
     def _get_journal_cargo(self):
         self.ensure_one()
         journal = self.env["account.journal"].search(
-            [("aso_cargo", "=", "Si"), ("company_id", "=", self.company_id.id)],
-            limit=1,
+            [("aso_cargo_automatico", "=", "Si"), ("company_id", "=", self.company_id.id)],
         )
         if not journal:
-            raise UserError(_("No existe un Diario contable con 'aso_cargo = Si'."))
+            raise UserError(_("No existe un Diario contable con 'Cargo Automatico Asociacion = Si'."))
+        if len(journal) > 1:
+            raise UserError(_(
+                "Existe más de un Diario contable con 'Cargo Automatico Asociacion = Si': %s. "
+                "Solo debe haber uno."
+            ) % ", ".join(journal.mapped("name")))
         return journal
 
     def _get_servicios_automaticos(self):
@@ -958,6 +962,18 @@ class ProyectoCobroMensualLine(models.Model):
     move_state = fields.Selection(related="move_id.state", string="Estado cargo", readonly=True, store=False)
     payment_state = fields.Selection(related="move_id.payment_state", string="Estado de pago", readonly=True, store=False)
     state = fields.Selection(related="cobro_id.state", string="Estado de cobro", readonly=True, store=False)
+
+    journal_id = fields.Many2one(
+        "account.journal", related="move_id.journal_id", string="Diario", store=True, readonly=True,
+    )
+    aso_cargo = fields.Selection(
+        related="journal_id.aso_cargo", string="Cargo Asociación", readonly=True,
+        help="Indica si el diario del cargo está marcado como 'Cargo Asociacion'.",
+    )
+    aso_cargo_automatico = fields.Selection(
+        related="journal_id.aso_cargo_automatico", string="Cargo Automático Asociación", readonly=True,
+        help="Indica si el diario del cargo es el diario único usado por el proceso de Cobros Mensuales.",
+    )
 
     currency_id = fields.Many2one("res.currency", related="move_id.currency_id", store=True, readonly=True)
 

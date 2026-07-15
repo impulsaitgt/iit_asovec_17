@@ -9,97 +9,103 @@
       <field name="report_type">qweb-pdf</field>
       <field name="report_name">iit_asovec.estado_cuenta_pdf</field>
       <field name="report_file">iit_asovec.estado_cuenta_pdf</field>
-      <field name="print_report_name">'Estado de Cuenta - %s - %s' % (object.proyecto_aso_id.display_name, object.residencia_id.display_name)</field>
+      <field name="print_report_name">'Estado de Cuenta - %s' % (object.cliente_id.display_name or object.residencia_ids[:1].display_name)</field>
     </record>
 
-    <!-- Template QWeb -->
+    <!-- Template QWeb: usa el mismo `_build_estado_cuenta_data` que el reporte HTML y el
+         Excel (ver report.iit_asovec.estado_cuenta_pdf / report_estado_cuenta_document en
+         models/estado_cuenta_report.py), para que los tres siempre coincidan. -->
     <template id="estado_cuenta_pdf">
       <t t-call="web.html_container">
         <t t-foreach="docs" t-as="o">
-          <t t-call="web.external_layout">
+        <t t-call="web.external_layout">
 
-            <div class="page">
-              <h2 style="margin-bottom: 4px;">Estado de Cuenta</h2>
+          <div class="page">
+            <h2 style="margin-bottom: 4px;">Estado de Cuenta</h2>
 
-              <div style="margin-bottom: 12px;">
-                <strong>Proyecto:</strong> <span t-esc="o.proyecto_aso_id.display_name"/><br/>
-                <strong>Residencia:</strong> <span t-esc="o.residencia_id.display_name"/><br/>
-                <strong>Fecha:</strong>
-                <span t-esc="o.create_date.strftime('%d/%m/%Y') if o.create_date else ''"/>
-              </div>
-
-              <!-- Líneas -->
-              <t t-set="lines" t-value="o._get_estado_cuenta_lines()"/>
-
-              <!-- Moneda base -->
-              <t t-set="cur" t-value="(lines and lines[0].currency_id) or o.env.company.currency_id"/>
-              <t t-set="cur_symbol" t-value="cur and cur.symbol or ''"/>
-
-              <table class="table table-sm o_main_table" style="width:100%; border-collapse: collapse;">
-                <thead>
-                  <tr>
-                    <th>Mes</th>
-                    <th>Año</th>
-                    <th>Cargo</th>
-                    <th>Residente</th>
-                    <th class="text-end">Total</th>
-                    <th class="text-end">Pagado</th>
-                    <th class="text-end">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <t t-foreach="lines" t-as="l">
-                    <t t-set="lsym" t-value="(l.currency_id and l.currency_id.symbol) or cur_symbol"/>
-                    <tr>
-                      <td><span t-esc="l.month"/></td>
-                      <td><span t-esc="l.year"/></td>
-                      <td><span t-esc="l.move_id.name if l.move_id else ''"/></td>
-                      <td><span t-esc="l.cliente_id.name"/></td>
-                      <td class="text-end">
-                        <span t-esc="('%s %s' % (lsym, '{:,.2f}'.format(l.amount_total or 0.0))).strip()"/>
-                      </td>
-                      <td class="text-end">
-                        <span t-esc="('%s %s' % (lsym, '{:,.2f}'.format(l.amount_paid or 0.0))).strip()"/>
-                      </td>
-                      <td class="text-end">
-                        <span t-esc="('%s %s' % (lsym, '{:,.2f}'.format(l.amount_balance or 0.0))).strip()"/>
-                      </td>
-                    </tr>
-                  </t>
-                </tbody>
-              </table>
-
-              <!-- Totales -->
-              <t t-set="total_amount" t-value="sum(lines.mapped('amount_total')) if lines else 0.0"/>
-              <t t-set="total_paid" t-value="sum(lines.mapped('amount_paid')) if lines else 0.0"/>
-              <t t-set="total_balance" t-value="sum(lines.mapped('amount_balance')) if lines else 0.0"/>
-
-              <div style="margin-top: 14px; width: 40%; margin-left: auto;">
-                <table class="table table-sm" style="width:100%;">
-                  <tr>
-                    <td><strong>Total cargos</strong></td>
-                    <td class="text-end">
-                      <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(total_amount or 0.0))).strip()"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><strong>Total pagado</strong></td>
-                    <td class="text-end">
-                      <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(total_paid or 0.0))).strip()"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><strong>Saldo total</strong></td>
-                    <td class="text-end">
-                      <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(total_balance or 0.0))).strip()"/>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-
+            <div style="margin-bottom: 8px;">
+              <strong>Proyecto:</strong> <span t-esc="proyecto.display_name"/><br/>
+              <strong>Residencia(s):</strong> <span t-esc="', '.join(residencias.mapped('display_name'))"/><br/>
+              <strong t-if="cliente">Residente:</strong> <span t-if="cliente" t-esc="cliente.name"/>
+              <t t-if="cliente"><br/></t>
+              <strong>Generado:</strong> <span t-esc="generated_at"/>
             </div>
 
-          </t>
+            <div style="margin-bottom: 14px; padding: 8px 12px; background: #fff8e1; border-left: 3px solid #b8860b; font-size: 11px;">
+              Se muestran todos los movimientos (cargos y pagos aplicados) con saldo acumulado,
+              hasta la fecha y hora de generación indicada arriba; movimientos posteriores no
+              están reflejados.
+              <t t-if="solo_residente_actual"> Se muestran únicamente los movimientos del residente actual.</t>
+            </div>
+
+            <!-- Moneda base -->
+            <t t-set="cur_symbol" t-value="currency and currency.symbol or ''"/>
+
+            <table class="table table-sm o_main_table" style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th t-if="len(residencias) &gt; 1">Residencia</th>
+                  <th>Tipo</th>
+                  <th>Origen</th>
+                  <th>Cargo/Pago</th>
+                  <th>Diario</th>
+                  <th class="text-end">Debe</th>
+                  <th class="text-end">Haber</th>
+                  <th class="text-end">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-foreach="movimientos" t-as="m">
+                  <t t-set="msym" t-value="(m['currency'] and m['currency'].symbol) or cur_symbol"/>
+                  <tr>
+                    <td><span t-esc="m['date'] and m['date'].strftime('%d/%m/%Y') or ''"/></td>
+                    <td t-if="len(residencias) &gt; 1"><span t-esc="m['residencia'].name"/></td>
+                    <td><span t-esc="m['tipo']"/></td>
+                    <td><span t-esc="m['origen']"/></td>
+                    <td><span t-esc="m['move_name'] or m['pago_ref'] or ''"/></td>
+                    <td><span t-esc="m['journal'].name if m['journal'] else ''"/></td>
+                    <td class="text-end">
+                      <span t-esc="m['debe'] and ('%s %s' % (msym, '{:,.2f}'.format(m['debe']))).strip() or ''"/>
+                    </td>
+                    <td class="text-end">
+                      <span t-esc="m['haber'] and ('%s %s' % (msym, '{:,.2f}'.format(m['haber']))).strip() or ''"/>
+                    </td>
+                    <td class="text-end">
+                      <span t-esc="('%s %s' % (msym, '{:,.2f}'.format(m['saldo_acumulado']))).strip()"/>
+                    </td>
+                  </tr>
+                </t>
+              </tbody>
+            </table>
+
+            <!-- Totales -->
+            <div style="margin-top: 14px; width: 40%; margin-left: auto;">
+              <table class="table table-sm" style="width:100%;">
+                <tr>
+                  <td><strong>Total cargos</strong></td>
+                  <td class="text-end">
+                    <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(resumen['total_facturado'] or 0.0))).strip()"/>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Total pagado</strong></td>
+                  <td class="text-end">
+                    <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(resumen['total_pagado'] or 0.0))).strip()"/>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Saldo total</strong></td>
+                  <td class="text-end">
+                    <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(resumen['total_saldo'] or 0.0))).strip()"/>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+          </div>
+
+        </t>
         </t>
       </t>
     </template>

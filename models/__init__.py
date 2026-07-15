@@ -6,6 +6,7 @@ from . import res_company
 from . import proyecto_cobro_mensual
 from . import account_journal
 from . import cobro_consulta_wizard
+from . import estado_cuenta_report
 from . import tipo_servicio_aso
 from . import account_move
 from . import account_move_line
