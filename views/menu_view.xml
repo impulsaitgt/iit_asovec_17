@@ -58,6 +58,12 @@
         <field name="name">Análisis Estado de Cuenta</field>
         <field name="res_model">asovec.proyecto_cobro_mensual_line</field>
         <field name="view_mode">tree,pivot,graph</field>
+        <!-- Solo cargos Registrados (move_state = posted) con residencia válida.
+             No hace falta filtrar por pago "registrado" aparte: amount_paid se
+             calcula por conciliación (amount_total - amount_residual), y Odoo solo
+             concilia apuntes ya posteados, así que un pago en borrador nunca puede
+             mover ese cálculo. -->
+        <field name="domain">[('move_state', '=', 'posted'), ('residencia_id', '!=', False)]</field>
         <field name="context">{}</field>
     </record>
 
@@ -150,9 +156,17 @@
     <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="60" />
     <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"
         action="cobro_mensual_consulta_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
+    <!-- Oculto temporalmente (16-jul-2026): los cargos de Deuda Migrada (diario DM)
+         no aparecen aquí porque el wizard de Migración de Deuda crea el account.move
+         directo, sin la línea de asovec.proyecto_cobro_mensual_line que este análisis
+         necesita (1,083 cargos DM posteados con residencia, 0 con línea, verificado
+         en asovec_pruebas). Pendiente: ajustar ese wizard + backfill de lo ya migrado.
+         Para reactivar: descomentar el <menuitem> de abajo y quitar el <delete>.
     <menuitem name="Análisis Cobros y Pagos" id="menu_asovec_estado_cuenta_analisis"
         parent="consultas_menu"
         action="action_asovec_estado_cuenta_analisis" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
+    -->
+    <delete id="menu_asovec_estado_cuenta_analisis" model="ir.ui.menu" />
     <menuitem name="Análisis Mensual de la Asociación" id="proceso_analisis_mensual_opcion"
         parent="consultas_menu" action="proceso_analisis_mensual_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_temporal_implementacion" />
     <menuitem name="Configuración de Residencias" id="residencia_config_opcion"
