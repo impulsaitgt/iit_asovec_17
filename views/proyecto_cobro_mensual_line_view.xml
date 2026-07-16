@@ -116,6 +116,19 @@
       <field name="model">asovec.proyecto_cobro_mensual_line</field>
       <field name="arch" type="xml">
         <form string="Detalle cobro mensual" create="false" edit="false" delete="false">
+          <header>
+            <!-- Solo para validar configuración (precios, cuentas contables por
+                 proyecto, etc.): borra y regenera el cargo de ESTA residencia con
+                 los valores vigentes. No aparece si ya está posteado (ahí ni se
+                 podría regenerar). -->
+            <button name="action_regenerar_cargo"
+              type="object"
+              string="🔄 Regenerar Cargo"
+              class="btn-secondary"
+              confirm="Esto borra el cargo actual de esta residencia y lo vuelve a generar con la configuración vigente. ¿Continuar?"
+              invisible="move_state == 'posted'"
+              groups="iit_asovec.asovec_group_administrador,iit_asovec.asovec_group_administracion_asociacion,iit_asovec.asovec_group_secretaria_asociacion" />
+          </header>
           <sheet>
 
             <div class="oe_title">
