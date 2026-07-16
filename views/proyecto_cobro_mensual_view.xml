@@ -236,15 +236,15 @@
                                         <!-- Solo para validar configuración (precios, cuentas
                                              contables por proyecto, etc.): borra y regenera el
                                              cargo de ESTA residencia con los valores vigentes.
-                                             Solo Administrador; no aparece si ya está posteado
-                                             (ahí ni se podría regenerar). -->
+                                             No aparece si ya está posteado (ahí ni se podría
+                                             regenerar). -->
                                         <button name="action_regenerar_cargo"
                                             type="object"
                                             string="🔄 Regenerar Cargo"
                                             class="btn-secondary"
                                             confirm="Esto borra el cargo actual de esta residencia y lo vuelve a generar con la configuración vigente. ¿Continuar?"
                                             invisible="move_state == 'posted'"
-                                            groups="iit_asovec.asovec_group_administrador" />
+                                            groups="iit_asovec.asovec_group_administrador,iit_asovec.asovec_group_administracion_asociacion,iit_asovec.asovec_group_secretaria_asociacion" />
                                     </header>
                                     <field name="contador_line_id" invisible="1" />
                                     <group>
