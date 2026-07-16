@@ -43,3 +43,21 @@ class EstadoCuentaController(http.Controller):
                 ("Content-Disposition", content_disposition(wizard.file_name)),
             ],
         )
+
+    @http.route("/asovec/analisis_mensual/<int:wizard_id>/xlsx", type="http", auth="user")
+    def analisis_mensual_xlsx(self, wizard_id, **kwargs):
+        """Genera y descarga el Excel del análisis mensual directamente desde el
+        reporte HTML, sin tener que volver al wizard."""
+        wizard = request.env["asovec.proceso_analisis_mensual_wizard"].browse(wizard_id).exists()
+        if not wizard:
+            return request.not_found()
+
+        wizard.action_generar_excel()
+
+        return request.make_response(
+            base64.b64decode(wizard.file_data),
+            headers=[
+                ("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                ("Content-Disposition", content_disposition(wizard.file_name)),
+            ],
+        )

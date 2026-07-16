@@ -117,10 +117,10 @@
     <menuitem name="Lecturas de Contador" id="contador_line_opcion" parent="contadores_menu"
         action="contador_line_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_temporal_implementacion" />
 
-    <!-- Sección propia para el trabajo de campo (rol operador de lecturas): separado
-         de "Contadores" (catálogo/admin) para que el operador tenga su propio menú
-         con nombre claro para su tarea del día a día. -->
-    <menuitem name="Toma de Lecturas" id="toma_lecturas_menu" parent="asovec_menu" sequence="25" />
+    <!-- Sección para el trabajo de campo (rol operador de lecturas), anidada al final
+         de "Contadores" (en vez de menú propio a nivel superior): mantiene un nombre
+         claro para la tarea del día a día del operador, sin agregar otro menú raíz. -->
+    <menuitem name="Toma de Lecturas" id="toma_lecturas_menu" parent="contadores_menu" sequence="90" />
     <menuitem name="Listado de Residencias por Proyecto" id="lectura_listado_wizard_opcion" parent="toma_lecturas_menu"
         action="lectura_listado_wizard_action" sequence="3"
         groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_operador_lecturas" />
@@ -129,29 +129,23 @@
         groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_operador_lecturas" />
 
     <menuitem name="Mantenimientos" id="mantenimientos_menu" parent="asovec_menu" sequence="30" />
-    <menuitem name="Tipos Servicios Aso" id="tipo_servicio_aso_opcion" parent="mantenimientos_menu"
-        sequence="31"
-        action="action_tipo_servicio_aso" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
-    <menuitem name="Residentes" id="clientes_opcion" parent="mantenimientos_menu" sequence="32"
+    <menuitem name="Residentes" id="clientes_opcion" parent="mantenimientos_menu" sequence="31"
         action="account.res_partner_action_customer" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
+    <menuitem name="Tipos Servicios Aso" id="tipo_servicio_aso_opcion" parent="mantenimientos_menu"
+        sequence="32"
+        action="action_tipo_servicio_aso" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
     <menuitem name="Servicios" id="productos_opcion" parent="mantenimientos_menu" sequence="33"
         action="action_product_template_servicios_aso" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
 
     <menuitem name="Movimientos" id="movimientos_menu" parent="asovec_menu" sequence="40" />
-    <menuitem name="Facturas y Cargos" id="facturas_cargos_opcion" parent="movimientos_menu"
+    <menuitem name="Cargos" id="facturas_cargos_opcion" parent="movimientos_menu"
         action="account.action_move_out_invoice_type" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
     <menuitem name="Pagos" id="pagos_opcion" parent="movimientos_menu"
         action="account.action_account_payments" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
 
-    <!-- Ciclo mensual recurrente, en orden: generar cargos, generar recibos, conciliar
-         banco (exportar estado de cuenta / cargar pagos). -->
     <menuitem name="Procesos" id="procesos_menu" parent="asovec_menu" sequence="50" />
     <menuitem name="Generacion de Cobros Mensuales" id="proyecto_cobro_mensual"
         parent="procesos_menu" action="proyecto_cobro_mensual_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
-    <menuitem name="Generar Recibos Mensuales" id="proceso_recibo_masivo_opcion"
-        parent="procesos_menu" action="proceso_recibo_masivo_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
-    <menuitem name="Generar CSV de Estado de Cuenta (Banco)" id="proceso_estado_cuenta_csv_opcion"
-        parent="procesos_menu" action="proceso_estado_cuenta_csv_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
 
     <menuitem name="Consultas" id="consultas_menu" parent="asovec_menu" sequence="60" />
     <menuitem name="Estado de Cuenta" id="estado_de_cuenta" parent="consultas_menu"
@@ -167,9 +161,13 @@
     <!-- Exportaciones a archivo, separadas de "Consultas" (que son reportes en
          pantalla) para no mezclar ambos tipos de acción en el mismo menú. -->
     <menuitem name="Exportaciones" id="exportaciones_menu" parent="asovec_menu" sequence="65" />
-    <menuitem name="Generar Excel de Estado de Lecturas" id="proceso_estado_lecturas_excel_opcion"
+    <menuitem name="Generar Recibos Mensuales" id="proceso_recibo_masivo_opcion" sequence="10"
+        parent="exportaciones_menu" action="proceso_recibo_masivo_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
+    <menuitem name="Generar Excel de Estado de Lecturas" id="proceso_estado_lecturas_excel_opcion" sequence="20"
         parent="exportaciones_menu" action="proceso_estado_lecturas_excel_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_temporal_implementacion" />
-    <menuitem name="Generar CSV de Lecturas (Todos los Proyectos)" id="proceso_lecturas_csv_opcion"
+    <menuitem name="Generar CSV de Estado de Cuenta (Banco)" id="proceso_estado_cuenta_csv_opcion" sequence="30"
+        parent="exportaciones_menu" action="proceso_estado_cuenta_csv_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
+    <menuitem name="Generar CSV de Lecturas (Todos los Proyectos)" id="proceso_lecturas_csv_opcion" sequence="40"
         parent="exportaciones_menu" action="proceso_lecturas_csv_wizard_action"
         groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_operador_lecturas" />
 
