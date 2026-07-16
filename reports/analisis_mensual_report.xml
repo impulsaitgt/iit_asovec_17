@@ -36,6 +36,19 @@
                     .header img { max-height: 70px; padding-right: 20px; }
                     .header h1 { font-size: 20px; margin: 0 0 4px 0; color: #1a1a1a; }
                     .header .subtitulo { color: #666; font-size: 14px; }
+                    .header-row { display: flex; justify-content: space-between; align-items: center; }
+                    .toolbar { display: flex; gap: 8px; }
+                    .btn-download {
+                        display: inline-block;
+                        text-decoration: none;
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        color: #fff;
+                        cursor: pointer;
+                    }
+                    .btn-excel { background: #2e7d32; }
 
                     /* Nota: se usa inline-block (no CSS grid/flex) para que estas tarjetas
                        tambien se vean bien al exportar a PDF con el motor viejo de
@@ -157,25 +170,33 @@
                         .tabs { display: none; }
                         .tab-content { display: block !important; page-break-after: always; box-shadow: none; }
                         .recibo-menu { display: none !important; }
+                        .toolbar { display: none; }
                     }
                 </style>
             </head>
             <body>
                 <main class="container">
                     <div class="header">
-                        <table>
-                            <tr>
-                                <td t-if="logo_b64">
-                                    <img t-att-src="'data:image/png;base64,%s' % logo_b64" />
-                                </td>
-                                <td>
-                                    <h1>Análisis Mensual de la Asociación</h1>
-                                    <div class="subtitulo">
-                                        <t t-esc="mes_label" /> <t t-esc="anio" /> — <t t-esc="company.name" />
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
+                        <div class="header-row">
+                            <table>
+                                <tr>
+                                    <td t-if="logo_b64">
+                                        <img t-att-src="'data:image/png;base64,%s' % logo_b64" />
+                                    </td>
+                                    <td>
+                                        <h1>Análisis Mensual de la Asociación</h1>
+                                        <div class="subtitulo">
+                                            <t t-esc="mes_label" /> <t t-esc="anio" /> — <t t-esc="company.name" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="toolbar">
+                                <a class="btn-download btn-excel"
+                                    t-attf-href="/asovec/analisis_mensual/#{docs.id}/xlsx"
+                                    target="_blank">Descargar Excel</a>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- ===================== RESUMEN GLOBAL (toda la asociación) ===================== -->
