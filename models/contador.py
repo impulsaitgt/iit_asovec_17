@@ -98,10 +98,21 @@ class Contador(models.Model):
                 ('residencia_id', '=', residencia.id),
                 ('active', '=', True),
             ]))
-            if tiene_activo and not residencia.activo:
-                residencia.activo = True
-            elif not tiene_activo and residencia.activo:
-                residencia.activo = False
+            vals = {}
+            if tiene_activo:
+                if not residencia.activo:
+                    vals['activo'] = True
+                if residencia.sin_contador:
+                    # Tener un contador activo contradice "Sin contador"; si se
+                    # arrastraba marcado de antes de que existiera el contador,
+                    # se apaga solo para que la residencia vuelva a aparecer en
+                    # Registrar Lectura / Listado de Residencias y se facture con
+                    # sus servicios automáticos normales.
+                    vals['sin_contador'] = False
+            elif residencia.activo:
+                vals['activo'] = False
+            if vals:
+                residencia.write(vals)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -275,6 +286,7 @@ class ContadorLine(models.Model):
             ("borrador", "Borrador"),
             ("invoiced", "Facturado"),
             ("migrado", "Migrado"),
+            ("inicial", "Inicial"),
         ],
         string="Facturación",
         compute="_compute_invoice_info",
@@ -282,7 +294,12 @@ class ContadorLine(models.Model):
     )
 
     payment_status_badge = fields.Selection(
-        selection=[("unpaid", "No pagado"), ("paid", "Pagado"), ("migrado", "Migrado")],
+        selection=[
+            ("unpaid", "No pagado"),
+            ("paid", "Pagado"),
+            ("migrado", "Migrado"),
+            ("inicial", "Inicial"),
+        ],
         string="Pago",
         compute="_compute_invoice_info",
         readonly=True,
@@ -378,9 +395,23 @@ class ContadorLine(models.Model):
             FOR EACH ROW EXECUTE FUNCTION asovec_contador_lines_protect_migrada()
         """)
 
-    @api.depends("invoice_line_ids.move_id.state", "invoice_line_ids.move_id.payment_state", "force_invoiced", "force_paid")
+    @api.depends(
+        "invoice_line_ids.move_id.state", "invoice_line_ids.move_id.payment_state",
+        "force_invoiced", "force_paid", "es_inicial",
+    )
     def _compute_invoice_info(self):
         for rec in self:
+            if rec.es_inicial:
+                # El registro inicial nunca genera cargo ni cobro (ver
+                # _generar_cargo_mensual), así que no aplica "No facturado"/"No
+                # pagado" (que suena a pendiente) ni los flags de migración: siempre
+                # es "Inicial".
+                rec.invoice_line_count = 0
+                rec.invoice_move_id = False
+                rec.invoice_status_badge = "inicial"
+                rec.payment_status_badge = "inicial"
+                continue
+
             if rec.force_invoiced:
                 rec.invoice_line_count = len(rec.invoice_line_ids)
                 rec.invoice_move_id = False
@@ -437,6 +468,15 @@ class ContadorLine(models.Model):
         if self.es_inicial:
             raise ValidationError("No se puede imprimir el recibo de un registro inicial.")
         return self.env.ref("iit_asovec.action_report_recibo_residencia_mensual").report_action(self)
+
+    def action_imprimir_recibo_detallado(self):
+        self.ensure_one()
+        if self.es_inicial:
+            raise ValidationError("No se puede imprimir el recibo de un registro inicial.")
+        line = self._cobro_line_for_period(self.residencia_id, self.mes, self.anio)
+        if not line:
+            raise ValidationError("Todavía no existe un cargo de cobro mensual para esta lectura.")
+        return line.action_imprimir_cargo()
 
     def action_save(self):
         """Guarda (el form ya se guardó solo por llamar a este método de tipo

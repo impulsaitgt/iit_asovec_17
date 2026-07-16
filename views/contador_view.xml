@@ -92,13 +92,15 @@
                                         decoration-success="invoice_status_badge == 'invoiced'"
                                         decoration-warning="invoice_status_badge == 'borrador'"
                                         decoration-info="invoice_status_badge == 'migrado'"
-                                        decoration-danger="invoice_status_badge == 'not_invoiced'" />
+                                        decoration-danger="invoice_status_badge == 'not_invoiced'"
+                                        decoration-muted="invoice_status_badge == 'inicial'" />
 
                                     <field name="payment_status_badge"
                                         widget="badge"
                                         decoration-success="payment_status_badge == 'paid'"
                                         decoration-info="payment_status_badge == 'migrado'"
                                         decoration-danger="payment_status_badge == 'unpaid'"
+                                        decoration-muted="payment_status_badge == 'inicial'"
                                         invisible="invoice_status_badge == 'not_invoiced'" />
 
                                     <field name="invoice_move_id" optional="hide"
@@ -114,12 +116,6 @@
                                             class="btn-primary"
                                             invisible="not invoice_move_id" />
 
-                                        <button name="action_view_invoice_lines"
-                                            type="object"
-                                            string="Ver Líneas"
-                                            class="btn-secondary"
-                                            invisible="invoice_line_count == 0" />
-
                                         <button name="action_imprimir_recibo"
                                             type="object"
                                             string="Imprimir Recibo"
@@ -127,7 +123,13 @@
                                             icon="fa-file-pdf-o"
                                             invisible="es_inicial" />
 
-                                        <field name="invoice_line_count" invisible="1" />
+                                        <button name="action_imprimir_recibo_detallado"
+                                            type="object"
+                                            string="Imprimir Recibo Detallado"
+                                            class="btn-primary"
+                                            icon="fa-file-pdf-o"
+                                            invisible="es_inicial" />
+
                                         <field name="invoice_move_id" invisible="1" />
                                     </header>
 
@@ -175,7 +177,8 @@
                                                     decoration-success="invoice_status_badge == 'invoiced'"
                                                     decoration-warning="invoice_status_badge == 'borrador'"
                                                     decoration-info="invoice_status_badge == 'migrado'"
-                                                    decoration-danger="invoice_status_badge == 'not_invoiced'" />
+                                                    decoration-danger="invoice_status_badge == 'not_invoiced'"
+                                                    decoration-muted="invoice_status_badge == 'inicial'" />
                                                 <field name="invoice_move_id" readonly="1"
                                                     invisible="not invoice_move_id" />
                                             </group>
@@ -185,6 +188,7 @@
                                                     decoration-success="payment_status_badge == 'paid'"
                                                     decoration-info="payment_status_badge == 'migrado'"
                                                     decoration-danger="payment_status_badge == 'unpaid'"
+                                                    decoration-muted="payment_status_badge == 'inicial'"
                                                     invisible="invoice_status_badge == 'not_invoiced'" />
                                             </group>
                                         </group>
@@ -266,14 +270,14 @@
                     decoration-warning="invoice_status_badge == 'borrador'"
                     decoration-info="invoice_status_badge == 'migrado'"
                     decoration-danger="invoice_status_badge == 'not_invoiced'"
-                    invisible="es_inicial" />
+                    decoration-muted="invoice_status_badge == 'inicial'" />
 
                 <field name="payment_status_badge"
                     widget="badge"
                     decoration-success="payment_status_badge == 'paid'"
                     decoration-info="payment_status_badge == 'migrado'"
                     decoration-danger="payment_status_badge == 'unpaid'"
-                    invisible="es_inicial" />
+                    decoration-muted="payment_status_badge == 'inicial'" />
 
                 <field name="invoice_move_id" optional="hide" invisible="not invoice_move_id" />
             </tree>
@@ -295,12 +299,6 @@
                         class="btn-primary"
                         invisible="not invoice_move_id" />
 
-                    <button name="action_view_invoice_lines"
-                        type="object"
-                        string="Ver Líneas"
-                        class="btn-secondary"
-                        invisible="invoice_line_count == 0" />
-
                     <button name="action_imprimir_recibo"
                         type="object"
                         string="Imprimir Recibo"
@@ -308,7 +306,13 @@
                         icon="fa-file-pdf-o"
                         invisible="es_inicial" />
 
-                    <field name="invoice_line_count" invisible="1" />
+                    <button name="action_imprimir_recibo_detallado"
+                        type="object"
+                        string="Imprimir Recibo Detallado"
+                        class="btn-primary"
+                        icon="fa-file-pdf-o"
+                        invisible="es_inicial" />
+
                     <field name="invoice_move_id" invisible="1" />
                     <button name="action_save"
                         string="💾 Guardar"
@@ -369,7 +373,8 @@
                                 decoration-success="invoice_status_badge == 'invoiced'"
                                 decoration-warning="invoice_status_badge == 'borrador'"
                                 decoration-info="invoice_status_badge == 'migrado'"
-                                decoration-danger="invoice_status_badge == 'not_invoiced'" />
+                                decoration-danger="invoice_status_badge == 'not_invoiced'"
+                                decoration-muted="invoice_status_badge == 'inicial'" />
                             <field name="invoice_move_id" readonly="1"
                                 invisible="not invoice_move_id" />
                         </group>
@@ -379,6 +384,7 @@
                                 decoration-success="payment_status_badge == 'paid'"
                                 decoration-info="payment_status_badge == 'migrado'"
                                 decoration-danger="payment_status_badge == 'unpaid'"
+                                decoration-muted="payment_status_badge == 'inicial'"
                                 invisible="invoice_status_badge == 'not_invoiced'" />
                         </group>
                     </group>
@@ -479,6 +485,11 @@
 
                 <filter string="Mensuales" name="mensuales" domain="[('es_inicial','=',False)]" />
                 <filter string="Inicial" name="inicial" domain="[('es_inicial','=',True)]" />
+
+                <separator />
+
+                <filter string="Activo" name="activo" domain="[('contador_id.active','=',True)]" />
+                <filter string="Inactivo" name="inactivo" domain="[('contador_id.active','=',False)]" />
 
                 <separator />
 
