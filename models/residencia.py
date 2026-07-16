@@ -217,7 +217,9 @@ class Residencia(models.Model):
     def _compute_lectura_count(self):
         Line = self.env['asovec.contador.lines'].sudo()
         for rec in self:
-            rec.lectura_count = Line.search_count([('residencia_id', '=', rec.id)])
+            rec.lectura_count = Line.search_count([
+                ('residencia_id', '=', rec.id), ('contador_id.active', '=', True),
+            ])
 
     def action_ver_contadores(self):
         self.ensure_one()
@@ -237,7 +239,7 @@ class Residencia(models.Model):
             'name': 'Lecturas',
             'res_model': 'asovec.contador.lines',
             'view_mode': 'tree,form',
-            'domain': [('residencia_id', '=', self.id)],
+            'domain': [('residencia_id', '=', self.id), ('contador_id.active', '=', True)],
             'context': {'default_residencia_id': self.id},
         }
 
