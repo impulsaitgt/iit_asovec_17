@@ -276,33 +276,6 @@ class Residencia(models.Model):
             },
         }
     
-    def action_cargar_servicios_asociacion(self):
-        self.ensure_one()
-
-        # 1) Borrar líneas actuales
-        self.residencia_lines.unlink()
-
-        # 2) Buscar productos marcados como servicio ASO
-        productos = self.env['product.template'].search([
-            ('aso_es_servicio_aso', '=', True),
-            ('aso_automatico', '=', True),
-            ('aso_activo', '=', True),
-            ('active', '=', True)
-        ])
-
-        # 3) Crear una línea por producto con su precio de lista
-        lines_vals = []
-        for p in productos:
-            lines_vals.append((0, 0, {
-                'producto_id': p.id,
-                'precio': p.list_price,
-            }))
-
-        self.write({'residencia_lines': lines_vals})
-
-        # opcional: notificación
-        return {'type': 'ir.actions.client', 'tag': 'reload'}
-
     def action_print_estado_cuenta_lecturas(self):
         self.ensure_one()
         return self.env.ref("iit_asovec.action_report_estado_cuenta_residencia_lecturas").report_action(self)
@@ -316,6 +289,31 @@ class Residencia(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': {'default_residencia_id': self.id},
+        }
+
+    def action_abrir_recibo_detallado_wizard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Imprimir Recibo Mensual Detallado',
+            'res_model': 'asovec.residencia_recibo_wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_residencia_id': self.id, 'default_detallado': True},
+        }
+
+    def action_abrir_estado_cuenta_wizard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Estado de Cuenta',
+            'res_model': 'asovec.cobro_mensual_consulta_wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_residencia_ids': [(6, 0, [self.id])],
+                'default_proyecto_aso_id': self.proyecto_aso_id.id,
+            },
         }
 
 

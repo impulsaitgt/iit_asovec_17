@@ -139,14 +139,20 @@ class CobroMensualConsultaWizard(models.TransientModel):
         fmt_dinero = workbook.add_format({"num_format": "#,##0.00"})
         fmt_fecha = workbook.add_format({"num_format": "dd/mm/yyyy"})
         fmt_dot = workbook.add_format({"font_color": "#c62828", "bold": True})
+        fmt_total_label = workbook.add_format({"bold": True, "top": 2})
+        fmt_total_dinero = workbook.add_format({"bold": True, "num_format": "#,##0.00", "top": 2})
 
-        worksheet.set_column(0, 0, 12)
-        worksheet.set_column(1, 1, 22)
-        worksheet.set_column(2, 2, 16)
-        worksheet.set_column(3, 3, 18)
-        worksheet.set_column(4, 4, 16)
-        worksheet.set_column(5, 5, 26)
-        worksheet.set_column(6, 9, 14)
+        tiene_convenio = datos["tiene_convenio"]
+        columnas = [("Fecha", 12), ("Residencia", 22), ("Tipo", 16), ("Cargo/Pago", 18), ("Diario", 16)]
+        if tiene_convenio:
+            columnas.append(("Convenio", 14))
+        columnas += [
+            ("Referencia Cliente", 26), ("Debe", 14), ("Haber", 14),
+            ("Saldo Acumulado", 14), ("Estado", 14),
+        ]
+        col = {nombre: idx for idx, (nombre, _ancho) in enumerate(columnas)}
+        for idx, (_nombre, ancho) in enumerate(columnas):
+            worksheet.set_column(idx, idx, ancho)
 
         worksheet.write(0, 0, "Estado de Cuenta", fmt_titulo)
         worksheet.write(1, 0, "%s — Generado: %s" % (datos["cliente"].name or "", datos["generated_at"]), fmt_subtitulo)
@@ -155,31 +161,34 @@ class CobroMensualConsultaWizard(models.TransientModel):
             worksheet.write_rich_string(row, 0, fmt_dot, "●", "  Pago no conciliado a ningún cargo (crédito a favor).", fmt_subtitulo)
 
         row = 3
-        encabezados = [
-            "Fecha", "Residencia", "Tipo", "Cargo/Pago", "Diario",
-            "Referencia Cliente", "Debe", "Haber", "Saldo Acumulado", "Estado",
-        ]
-        for col, texto in enumerate(encabezados):
-            worksheet.write(row, col, texto, fmt_header)
+        for texto, _ancho in columnas:
+            worksheet.write(row, col[texto], texto, fmt_header)
         header_row = row
         row += 1
 
         for mov in datos["movimientos"]:
-            worksheet.write_datetime(row, 0, mov["date"], fmt_fecha) if mov["date"] else worksheet.write(row, 0, "")
-            worksheet.write(row, 1, mov["residencia"].name or "")
-            worksheet.write(row, 2, mov["tipo_label"])
+            worksheet.write_datetime(row, col["Fecha"], mov["date"], fmt_fecha) if mov["date"] else worksheet.write(row, col["Fecha"], "")
+            worksheet.write(row, col["Residencia"], mov["residencia"].name or "")
+            worksheet.write(row, col["Tipo"], mov["tipo_label"])
             ref = mov["move_name"] or mov.get("pago_ref") or ""
             if mov["tipo"] == "Pago" and not mov["aplicado"]:
-                worksheet.write_rich_string(row, 3, ref + "  ", fmt_dot, "●")
+                worksheet.write_rich_string(row, col["Cargo/Pago"], ref + "  ", fmt_dot, "●")
             else:
-                worksheet.write(row, 3, ref)
-            worksheet.write(row, 4, mov["journal"].name if mov["journal"] else "")
-            worksheet.write(row, 5, mov["referencia_cliente"] or "")
-            worksheet.write(row, 6, mov["debe"], fmt_dinero)
-            worksheet.write(row, 7, mov["haber"], fmt_dinero)
-            worksheet.write(row, 8, mov["saldo_acumulado"], fmt_dinero)
-            worksheet.write(row, 9, mov["state"] or "")
+                worksheet.write(row, col["Cargo/Pago"], ref)
+            worksheet.write(row, col["Diario"], mov["journal"].name if mov["journal"] else "")
+            if tiene_convenio:
+                worksheet.write(row, col["Convenio"], mov["convenio"].numero if mov["convenio"] else "")
+            worksheet.write(row, col["Referencia Cliente"], mov["referencia_cliente"] or "")
+            worksheet.write(row, col["Debe"], mov["debe"], fmt_dinero)
+            worksheet.write(row, col["Haber"], mov["haber"], fmt_dinero)
+            worksheet.write(row, col["Saldo Acumulado"], mov["saldo_acumulado"], fmt_dinero)
+            worksheet.write(row, col["Estado"], mov["state"] or "")
             row += 1
+
+        worksheet.write(row, col["Referencia Cliente"], "Totales", fmt_total_label)
+        worksheet.write(row, col["Debe"], datos["resumen"]["total_facturado"], fmt_total_dinero)
+        worksheet.write(row, col["Haber"], datos["resumen"]["total_pagado"], fmt_total_dinero)
+        worksheet.write(row, col["Saldo Acumulado"], datos["resumen"]["total_saldo"], fmt_total_dinero)
 
         worksheet.freeze_panes(header_row + 1, 0)
         workbook.close()

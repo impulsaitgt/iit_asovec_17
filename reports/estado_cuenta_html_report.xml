@@ -226,6 +226,7 @@
                                     <th class="text-left">Tipo</th>
                                     <th class="text-left">Cargo / Pago</th>
                                     <th class="text-left">Diario</th>
+                                    <th class="text-left" t-if="tiene_convenio">Convenio</th>
                                     <th class="text-left">Referencia Cliente</th>
                                     <th>Debe</th>
                                     <th>Haber</th>
@@ -258,6 +259,7 @@
                                                 class="sin-aplicar-flag" title="Pago no conciliado a ningún cargo (crédito a favor)"></span>
                                         </td>
                                         <td class="text-left"><t t-esc="m['journal'].name if m['journal'] else '—'" /></td>
+                                        <td class="text-left" t-if="tiene_convenio"><t t-esc="m['convenio'].numero if m['convenio'] else '—'" /></td>
                                         <td class="text-left"><t t-esc="m['referencia_cliente'] or '—'" /></td>
                                         <td><t t-if="m['debe']" t-esc="'%s %s' % (msym, '{:,.2f}'.format(m['debe']))" /></td>
                                         <td><t t-if="m['haber']" t-esc="'%s %s' % (msym, '{:,.2f}'.format(m['haber']))" /></td>
@@ -267,7 +269,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td t-attf-colspan="#{len(residencias) &gt; 1 and 6 or 5}" class="text-left">Totales</td>
+                                    <td t-attf-colspan="#{5 + (len(residencias) &gt; 1 and 1 or 0) + (tiene_convenio and 1 or 0)}" class="text-left">Totales</td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_facturado'])" /></td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_pagado'])" /></td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_saldo'])" /></td>

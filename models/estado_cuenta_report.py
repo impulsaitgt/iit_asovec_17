@@ -11,6 +11,12 @@ class ReportEstadoCuenta(models.AbstractModel):
     _name = "report.iit_asovec.report_estado_cuenta_document"
     _description = "Estado de Cuenta (documento)"
 
+    def _payment_tiene_convenio(self):
+        """El campo 'convenio_id' en account.payment lo agrega el módulo opcional
+        iit_soap_bi (Servipagos): si no está instalado, simplemente no se muestra
+        columna de Convenio en el Estado de Cuenta."""
+        return "convenio_id" in self.env["account.payment"]._fields
+
     def _tipo_label_cargo(self, journal):
         if journal.aso_cargo_migrado == "Si":
             return "Cargo Migrado"
@@ -32,6 +38,7 @@ class ReportEstadoCuenta(models.AbstractModel):
             "pago_move": False,
             "pago_payment": False,
             "journal": move.journal_id,
+            "convenio": False,
             "aso_cargo": "Si" if (move.journal_id.aso_cargo_migrado == "Si" or move.journal_id.aso_cargo_automatico == "Si") else "No",
             "aso_cargo_automatico": move.journal_id.aso_cargo_automatico,
             "cliente": cliente,
@@ -45,6 +52,7 @@ class ReportEstadoCuenta(models.AbstractModel):
     def _movimientos_pago(self, move, residencia):
         """Pagos realmente aplicados a `move` (vía conciliación real, igual a lo que
         Odoo muestra en el widget "Payments" de la factura), no un simple total-residual."""
+        tiene_convenio = self._payment_tiene_convenio()
         movimientos = []
         for reconciled in move.sudo()._get_all_reconciled_invoice_partials():
             if reconciled.get("is_exchange"):
@@ -63,6 +71,7 @@ class ReportEstadoCuenta(models.AbstractModel):
                 "pago_move": aml.move_id,
                 "pago_payment": aml.payment_id,
                 "journal": aml.journal_id,
+                "convenio": (aml.payment_id.convenio_id if tiene_convenio and aml.payment_id else False),
                 "aso_cargo": False,
                 "aso_cargo_automatico": False,
                 "cliente": move.partner_id,
@@ -89,6 +98,7 @@ class ReportEstadoCuenta(models.AbstractModel):
             ("state", "=", "posted"),
             ("is_reconciled", "=", False),
         ])
+        tiene_convenio = self._payment_tiene_convenio()
         movimientos = []
         for pago in pagos:
             movimientos.append({
@@ -104,6 +114,7 @@ class ReportEstadoCuenta(models.AbstractModel):
                 "pago_move": pago.move_id,
                 "pago_payment": pago,
                 "journal": pago.journal_id,
+                "convenio": (pago.convenio_id if tiene_convenio else False),
                 "aso_cargo": False,
                 "aso_cargo_automatico": False,
                 "cliente": cliente,
@@ -201,6 +212,7 @@ class ReportEstadoCuenta(models.AbstractModel):
             "movimientos": movimientos,
             "resumen": resumen,
             "currency": currency,
+            "tiene_convenio": self._payment_tiene_convenio(),
         }
 
     @api.model
