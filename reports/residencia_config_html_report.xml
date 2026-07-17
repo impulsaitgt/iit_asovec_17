@@ -206,11 +206,12 @@
                                         <td class="text-left"><t t-esc="f['direccion'] or ''" /></td>
                                         <td class="text-left"><t t-esc="f['residente'].name or ''" /></td>
                                         <td class="text-left">
-                                            <span t-if="f['canon_paga']" class="badge badge-success">
+                                            <span t-if="f['canon_estado'] == 'paga'" class="badge badge-success">
                                                 <t t-esc="'Sí (%s)' % ('propio' if f['canon_propio'] else 'proyecto')" />
                                             </span>
+                                            <span t-elif="f['canon_estado'] == 'no_aplica'" class="badge badge-muted">No aplica (inactiva)</span>
                                             <span t-else="" class="badge badge-muted">No</span>
-                                            <t t-if="f['canon_paga']"> — <t t-esc="'%s %s' % (fsym, '{:,.2f}'.format(f['canon_valor']))" /></t>
+                                            <t t-if="f['canon_estado'] == 'paga'"> — <t t-esc="'%s %s' % (fsym, '{:,.2f}'.format(f['canon_valor']))" /></t>
                                         </td>
                                         <td class="text-left">
                                             <span t-attf-class="badge #{f['exonera_exceso'] and 'badge-purple' or 'badge-muted'}">

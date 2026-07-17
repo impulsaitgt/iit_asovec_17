@@ -28,15 +28,15 @@
         <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('base.group_allow_export'))]"/>
     </record>
 
-    <!-- Solo lectura sobre la configuración de la asociación: Proyectos, Residencias
-         (y sus servicios especiales por residencia), Residentes (res.partner), Tipos
-         de Servicio (y sus precios por proyecto), y Servicios (product.template).
-         Sí puede operar el día a día (contadores, lecturas, cobros, recibos, etc.),
-         solo no puede tocar la configuración base. No implica ("implied_ids") al
-         grupo Administración Asociación a propósito: en Odoo los accesos de grupos
-         implicados se SUMAN, así que heredar ese grupo le devolvería los permisos
-         completos que se le quieren quitar aquí. Por eso este grupo tiene su propia
-         fila independiente por modelo en ir.model.access.csv (no hereda del anterior). -->
+    <!-- Puede modificar la configuración de la asociación: Proyectos, Residencias (y
+         sus servicios especiales por residencia), Tipos de Servicio (y sus precios por
+         proyecto), y Servicios (product.template, donde además puede crear nuevos). No
+         puede CREAR Proyectos ni Tipos de Servicio nuevos (solo editar los existentes) -
+         ver ir.model.access.csv. No implica ("implied_ids") al grupo Administración
+         Asociación a propósito: en Odoo los accesos de grupos implicados se SUMAN, así
+         que heredar ese grupo le devolvería permisos que no necesariamente se le quieren
+         dar aquí. Por eso este grupo tiene su propia fila independiente por modelo en
+         ir.model.access.csv (no hereda del anterior). -->
     <record id="asovec_group_secretaria_asociacion" model="res.groups">
         <field name="name">Secretaria Asociacion de Vecinos</field>
         <field name="category_id" ref="categoria_modulo_asovec"/>

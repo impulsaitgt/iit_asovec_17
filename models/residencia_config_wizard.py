@@ -88,7 +88,12 @@ class ResidenciaConfigWizard(models.TransientModel):
             worksheet.write(row, 1, nombre_residencia)
             worksheet.write(row, 2, fila["direccion"] or "")
             worksheet.write(row, 3, fila["residente"].name or "")
-            worksheet.write(row, 4, "Sí (%s)" % ("propio" if fila["canon_propio"] else "proyecto") if fila["canon_paga"] else "No")
+            if fila["canon_estado"] == "paga":
+                worksheet.write(row, 4, "Sí (%s)" % ("propio" if fila["canon_propio"] else "proyecto"))
+            elif fila["canon_estado"] == "no_aplica":
+                worksheet.write(row, 4, "No aplica (inactiva)")
+            else:
+                worksheet.write(row, 4, "No")
             worksheet.write(row, 5, fila["canon_valor"], fmt_dinero)
             worksheet.write(row, 6, "Sí" if fila["exonera_exceso"] else "No")
             worksheet.write(row, 7, "Sí (%.2f)" % fila["valor_inactivo"] if fila["cobra_inactivo"] else "No (activa)")
