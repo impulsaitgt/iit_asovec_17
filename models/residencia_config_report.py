@@ -52,6 +52,18 @@ class ReportResidenciaConfig(models.AbstractModel):
         else:
             canon_valor = proyecto.cobro_base
 
+        # Igual que los servicios (ver _precio_servicio): una residencia inactiva no
+        # genera línea de Canon de agua al facturar (_build_invoice_lines_residencia
+        # solo cobra la cuota de "contador inactivo"), así que aquí tampoco debe
+        # aparecer como si pagara canon.
+        if not residencia.activo:
+            canon_estado = "no_aplica"
+            canon_valor = 0.0
+        elif canon_valor > 0:
+            canon_estado = "paga"
+        else:
+            canon_estado = "no_paga"
+
         servicios_vals = {s.name: self._precio_servicio(residencia, s) for s in servicios}
         contador = residencia._get_contador_activo()
 
@@ -63,7 +75,8 @@ class ReportResidenciaConfig(models.AbstractModel):
             "no_paga_servicios": residencia.no_paga_servicios,
             "canon_propio": residencia.cobro_base_especial,
             "canon_valor": canon_valor,
-            "canon_paga": canon_valor > 0,
+            "canon_estado": canon_estado,
+            "canon_paga": canon_estado == "paga",
             "exonera_exceso": residencia.exonera_exceso_agua,
             "cobra_inactivo": not residencia.activo,
             "valor_inactivo": proyecto.cobro_inactivas,
