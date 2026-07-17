@@ -9,11 +9,6 @@
                 <header>
                     <button name="action_nueva_lectura" type="object" string="Nueva Lectura"
                         class="btn-primary" />
-                    <button name="action_cargar_servicios_asociacion"
-                        type="object"
-                        string="Cargar Servicios de Asociación"
-                        class="btn-secondary"
-                        help="Borra los servicios actuales y carga todos los productos marcados como servicio de asociación." />
                     <button name="action_print_estado_cuenta_lecturas"
                         type="object"
                         string="Estado de Cuenta (Lecturas)"
@@ -22,6 +17,16 @@
                     <button name="action_abrir_recibo_wizard"
                         type="object"
                         string="Recibo Mensual"
+                        class="btn-primary"
+                        icon="fa-file-pdf-o" />
+                    <button name="action_abrir_recibo_detallado_wizard"
+                        type="object"
+                        string="Recibo Mensual Detallado"
+                        class="btn-primary"
+                        icon="fa-file-pdf-o" />
+                    <button name="action_abrir_estado_cuenta_wizard"
+                        type="object"
+                        string="Estado de Cuenta"
                         class="btn-primary"
                         icon="fa-file-pdf-o" />
                 </header>

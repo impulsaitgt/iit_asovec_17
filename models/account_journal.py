@@ -12,11 +12,6 @@ class AccountJournal(models.Model):
              "Facturación. Excluyente con 'Cargo Automatico Asociacion' (son procesos "
              "distintos, un diario no puede ser de los dos a la vez).",
     )
-    convenio_principal = fields.Char(string='Convenio Principal')
-
-    aso_cargo_otro = fields.Selection([('No', 'No'), ('Si', 'Si')], default='No', string='Cargo Asociacion Otro')
-    convenio_otro = fields.Char(string='Convenio Otro')
-
     aso_cargo_automatico = fields.Selection(
         [('No', 'No'), ('Si', 'Si')], default='No', string='Cargo Automatico Asociacion',
         help="Diario único que usa el proceso de Cobros Mensuales para postear los cargos "
@@ -32,18 +27,6 @@ class AccountJournal(models.Model):
              "Residencia válida. Desactívelo para diarios usados para otros controles "
              "donde no aplica el concepto de Residencia, aunque el cliente sea un residente.",
     )
-
-    @api.constrains('aso_cargo_migrado', 'convenio_principal', 'aso_cargo_otro', 'convenio_otro')
-    def _check_convenios(self):
-        for rec in self:
-            if rec.convenio_principal and rec.aso_cargo_migrado != 'Si':
-                raise ValidationError(
-                    "Solo se puede llenar 'Convenio Principal' cuando 'Cargo Migrado' es 'Si'."
-                )
-            if rec.convenio_otro and rec.aso_cargo_otro != 'Si':
-                raise ValidationError(
-                    "Solo se puede llenar 'Convenio Otro' cuando 'Cargo Asociacion Otro' es 'Si'."
-                )
 
     @api.constrains('aso_cargo_automatico', 'company_id')
     def _check_cargo_automatico_unico(self):

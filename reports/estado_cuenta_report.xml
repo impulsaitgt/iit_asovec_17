@@ -50,6 +50,7 @@
                   <th>Tipo</th>
                   <th>Cargo/Pago</th>
                   <th>Diario</th>
+                  <th t-if="tiene_convenio">Convenio</th>
                   <th>Referencia Cliente</th>
                   <th class="text-end">Debe</th>
                   <th class="text-end">Haber</th>
@@ -69,6 +70,7 @@
                         style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#c62828; margin-left:5px;"></span>
                     </td>
                     <td><span t-esc="m['journal'].name if m['journal'] else ''"/></td>
+                    <td t-if="tiene_convenio"><span t-esc="m['convenio'].numero if m['convenio'] else ''"/></td>
                     <td><span t-esc="m['referencia_cliente'] or ''"/></td>
                     <td class="text-end">
                       <span t-esc="m['debe'] and ('%s %s' % (msym, '{:,.2f}'.format(m['debe']))).strip() or ''"/>

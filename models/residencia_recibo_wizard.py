@@ -12,6 +12,7 @@ class ResidenciaReciboWizard(models.TransientModel):
     residencia_id = fields.Many2one("asovec.residencia", string="Residencia", required=True)
     mes = fields.Selection(MONTH_SELECTION, string="Mes", required=True)
     anio = fields.Integer(string="Año", required=True)
+    detallado = fields.Boolean(string="Detallado", default=False)
 
     @api.model
     def default_get(self, fields_list):
@@ -25,6 +26,17 @@ class ResidenciaReciboWizard(models.TransientModel):
 
     def action_imprimir(self):
         self.ensure_one()
+
+        if self.detallado:
+            line = self.env["asovec.contador.lines"]._cobro_line_for_period(
+                self.residencia_id, self.mes, self.anio
+            )
+            if not line:
+                mes_label = dict(MONTH_SELECTION).get(self.mes, self.mes)
+                raise UserError(_(
+                    "No existe un cargo de cobro mensual para %s/%s en esta residencia."
+                ) % (mes_label, self.anio))
+            return line.action_imprimir_cargo()
 
         contador = self.residencia_id._get_contador_activo()
         if not contador:
