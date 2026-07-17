@@ -261,14 +261,14 @@ class Residencia(models.Model):
         if not contador:
             raise ValidationError("Esta residencia no tiene contador. Cree uno (y actívelo) antes de ingresar lecturas.")
 
-        vista_operador = self.env.ref('iit_asovec.asovec_contador_lines_form_view_operador')
+        vista_normal = self.env.ref('iit_asovec.asovec_contador_lines_form_view')
 
         return {
             'type': 'ir.actions.act_window',
             'name': 'Nueva Lectura',
             'res_model': 'asovec.contador.lines',
             'view_mode': 'form',
-            'views': [(vista_operador.id, 'form')],
+            'views': [(vista_normal.id, 'form')],
             'target': 'current',  # cambia a 'new' si lo querés en popup
             'context': {
                 'default_contador_id': contador.id,
