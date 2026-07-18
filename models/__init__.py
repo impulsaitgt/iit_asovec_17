@@ -10,6 +10,7 @@ from . import estado_cuenta_report
 from . import tipo_servicio_aso
 from . import account_move
 from . import account_move_line
+from . import account_payment
 from . import residencia_report
 from . import residencia_recibo_wizard
 from . import residencia_recibo_report

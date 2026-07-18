@@ -35,6 +35,7 @@
         'views/proceso_lecturas_csv_wizard_view.xml',
         'views/lectura_listado_wizard_view.xml',
         'views/account_move_view.xml',
+        'views/account_payment_view.xml',
         'views/residencia_config_wizard_view.xml',
         'views/menu_view.xml',
         'reports/estado_cuenta_report.xml',
