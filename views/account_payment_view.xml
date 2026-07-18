@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_account_payment_tree_inherit_aso_residencia" model="ir.ui.view">
+      <field name="name">account.payment.tree.inherit.aso.residencia</field>
+      <field name="model">account.payment</field>
+      <field name="inherit_id" ref="account.view_account_payment_tree"/>
+      <field name="arch" type="xml">
+        <field name="partner_id" position="after">
+          <field name="residencia_id" optional="show"/>
+        </field>
+      </field>
+    </record>
+
+    <record id="view_account_payment_search_inherit_aso_residencia" model="ir.ui.view">
+      <field name="name">account.payment.search.inherit.aso.residencia</field>
+      <field name="model">account.payment</field>
+      <field name="inherit_id" ref="account.view_account_payment_search"/>
+      <field name="arch" type="xml">
+        <field name="partner_id" position="after">
+          <field name="residencia_id"/>
+        </field>
+        <filter name="partner" position="after">
+          <filter string="Residencia" name="groupby_residencia" domain="[]"
+            context="{'group_by': 'residencia_id'}"/>
+        </filter>
+      </field>
+    </record>
+
+  </data>
+</odoo>
