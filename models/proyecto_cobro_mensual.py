@@ -13,7 +13,7 @@ class ProyectoCobroMensual(models.Model):
     _name = "asovec.proyecto_cobro_mensual"
     _description = "Cobro mensual por Proyecto"
     _inherit = ["mail.thread", "mail.activity.mixin"]
-    _order = "year desc, month desc, id desc"
+    _order = "year desc, month desc, proyecto_indice asc, id desc"
 
     name = fields.Char(string="Referencia", compute="_compute_name", store=True)
     proyecto_aso_id = fields.Many2one(
@@ -22,6 +22,12 @@ class ProyectoCobroMensual(models.Model):
         required=True,
         index=True,
         tracking=True,
+    )
+    proyecto_indice = fields.Integer(
+        related="proyecto_aso_id.indice",
+        string="Índice del Proyecto",
+        store=True,
+        readonly=True,
     )
 
     month = fields.Selection(

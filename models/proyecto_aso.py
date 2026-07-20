@@ -2,6 +2,7 @@ from odoo import models,fields
 
 class ProyectoAso(models.Model):
     _name = 'asovec.proyecto_aso'
+    _order = "indice asc"
 
     name = fields.Char(string="Nombre",required=True)
     direccion = fields.Char(string="Direccion")
@@ -25,6 +26,13 @@ class ProyectoAso(models.Model):
         required=True,
         help="Día del mes usado para calcular la fecha a partir de la cual se puede pagar, "
              "cuando el cobro mensual todavía no ha sido confirmado.",
+    )
+    indice = fields.Integer(
+        string="Índice",
+        default=0,
+        help="Orden manual del proyecto. Se usa para ordenar el listado de Cobros "
+             "Mensuales (mes/año más reciente primero, y dentro de un mismo mes/año, "
+             "por este índice de menor a mayor).",
     )
 
     _sql_constraints = [
