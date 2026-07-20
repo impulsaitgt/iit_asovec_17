@@ -6,7 +6,7 @@
         <field name="name">asovec.proyecto_cobro_mensual.tree</field>
         <field name="model">asovec.proyecto_cobro_mensual</field>
         <field name="arch" type="xml">
-            <tree string="Cobros mensuales" default_order="year desc, month desc">
+            <tree string="Cobros mensuales" default_order="year desc, month desc, proyecto_indice asc">
                 <field name="name" />
                 <field name="proyecto_aso_id" />
                 <field name="month" />

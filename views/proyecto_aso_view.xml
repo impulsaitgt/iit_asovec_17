@@ -25,6 +25,7 @@
                     </div>
                     <group>
                         <field name="name" placeholder="Nombre" />
+                        <field name="indice" />
                     </group>
                     <group>
                         <group>
@@ -55,8 +56,9 @@
         <field name="name">proyecto_aso.tree.view"></field>
         <field name="model">asovec.proyecto_aso</field>
         <field name="arch" type="xml">
-            <tree string="Proyectos">
+            <tree string="Proyectos" default_order="indice asc">
                 <field name="name" />
+                <field name="indice" />
                 <field name="direccion" />
                 <field name="detalle" />
                 <field name="currency_id" invisible="1"/>
