@@ -13,6 +13,42 @@
     </field>
   </record>
 
+  <!-- El dominio núcleo de product_id en las líneas de factura decide entre
+       sale_ok/purchase_ok leyendo context.get('default_move_type'). Esa clave de
+       contexto la inyecta el propio campo invoice_line_ids, pero leyéndola de
+       context.get('default_move_type') del contexto AMBIENTE (el que trae la acción
+       que abrió el formulario) — cuando el cargo se abre por el enlace interno del
+       campo "Cargo" en Cobros Mensuales (en vez de por el menú normal de
+       Facturación), ese contexto ambiente no trae 'default_move_type', la clave
+       queda vacía y el dominio de product_id cae al 'or' de purchase_ok, ocultando
+       todos los servicios de la Asociación (que son sale_ok pero no purchase_ok).
+
+       Nota: NO alcanza con poner un context="{'move_type': ...}" directo en el
+       campo product_id — el atributo domain de un campo se evalúa contra el
+       contexto ambiente que lo rodea, no contra el atributo context del propio
+       campo (se probó y confirmó con capturas de red). Por eso el fix real va en el
+       context de invoice_line_ids (que sí es ambiente para sus campos hijos, como
+       ya hace el propio invoice_line_ids con 'default_move_type' original): se
+       reemplaza esa clave para que lea el campo real move_type del formulario en
+       lugar del contexto ambiente, que no siempre está disponible. -->
+  <record id="view_move_form_asovec_product_domain_fix" model="ir.ui.view">
+    <field name="name">account.move.form.asovec.product.domain.fix</field>
+    <field name="model">account.move</field>
+    <field name="inherit_id" ref="account.view_move_form" />
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='invoice_line_ids']" position="attributes">
+        <attribute name="context">{
+          'default_move_type': move_type,
+          'journal_id': journal_id,
+          'default_partner_id': commercial_partner_id,
+          'default_currency_id': currency_id or company_currency_id,
+          'default_display_type': 'product',
+          'quick_encoding_vals': quick_encoding_vals,
+        }</attribute>
+      </xpath>
+    </field>
+  </record>
+
   <record id="view_out_invoice_tree_asovec_residencia" model="ir.ui.view">
     <field name="name">account.move.tree.asovec.residencia</field>
     <field name="model">account.move</field>

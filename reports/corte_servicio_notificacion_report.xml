@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Formato carta con márgenes mínimos para que quepan 2 avisos (media carta cada uno) -->
+  <record id="paperformat_carta_corte_servicio" model="report.paperformat">
+    <field name="name">Carta - Aviso de Corte (2 por hoja)</field>
+    <field name="format">custom</field>
+    <field name="page_height">279</field>
+    <field name="page_width">216</field>
+    <field name="orientation">Portrait</field>
+    <field name="margin_top">5</field>
+    <field name="margin_bottom">5</field>
+    <field name="margin_left">8</field>
+    <field name="margin_right">8</field>
+    <field name="header_line" eval="False" />
+    <field name="header_spacing">0</field>
+    <field name="dpi">90</field>
+  </record>
+
+  <!-- Acción del reporte -->
+  <record id="action_report_corte_servicio_notificacion" model="ir.actions.report">
+    <field name="name">Notificación de Corte de Servicio</field>
+    <field name="model">asovec.proceso_corte_servicio_wizard_line</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">iit_asovec.report_corte_servicio_notificacion</field>
+    <field name="report_file">iit_asovec.report_corte_servicio_notificacion</field>
+    <field name="print_report_name">'Aviso de Corte'</field>
+    <field name="paperformat_id" ref="paperformat_carta_corte_servicio" />
+  </record>
+
+  <!-- Card reutilizable: un aviso individual (media carta). Se apilan 2 por hoja. -->
+  <template id="corte_servicio_carta_card">
+    <div style="border: 1px dashed #999; border-radius: 4px; padding: 10px 14px; height: 100%; box-sizing: border-box; overflow: hidden; font-size: 11px; line-height:1.35;">
+      <table style="width:100%; margin-bottom:8px; border-collapse:collapse;">
+        <tr>
+          <td style="width:1%; white-space:nowrap; vertical-align:middle; padding:0;">
+            <img t-if="carta['logo']" t-att-src="image_data_uri(carta['logo'])" style="max-height: 46px; max-width: 90px;" alt="Logo" />
+          </td>
+          <td style="vertical-align:middle; padding:0 0 0 10px; text-align:left; font-size: 14px;">
+            <span t-esc="carta['company'].name or ''" />
+          </td>
+        </tr>
+      </table>
+
+      <!-- NOTA: en este entorno wkhtmltopdf, el texto en negrita (font-weight:bold,
+           con <strong> o vía CSS) rompe los acentos/tildes (aparece "Ã³" en vez de
+           "ó"); el texto normal los renderiza bien. Por eso solo se deja en negrita
+           lo que es 100% texto fijo sin tildes/ñ (AVISO IMPORTANTE, JUNTA DIRECTIVA,
+           mes(es)); todo lo demás que incluya texto dinámico o palabras con tilde/ñ
+           se deja en peso normal. -->
+      <div style="text-align:center; font-weight:bold; font-size:13px; margin-bottom:6px;">AVISO IMPORTANTE</div>
+
+      <div style="text-align:right; margin-bottom:8px;">
+        <span t-esc="carta['proyecto'] and carta['proyecto'].name or ''" />,
+        <span t-esc="carta['fecha_impresion']" t-options="{'widget': 'date'}" />
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <div>Señor (a): <span t-esc="carta['vecino']" /></div>
+        <div><span t-esc="carta['direccion']" /></div>
+        <div>Cuenta: <span t-esc="carta['cuenta']" /></div>
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <p style="margin:0 0 6px 0;">Estimado Vecino:</p>
+        <p style="margin:0 0 6px 0;">
+          Se le comunica que tiene acumulados
+          <strong><span t-esc="carta['meses_atraso']" /> mes(es)</strong>
+          del servicio de agua potable, correspondiente a los meses de
+          <span t-esc="carta['meses_detalle']" />,
+          por un monto total de
+          <span t-esc="carta['monto_atraso']" t-options="{'widget': 'monetary', 'display_currency': carta['currency']}" />,
+          por lo que se le notifica con <span t-esc="carta['dias_habiles_corte']" /> días hábiles de
+          anticipación que el día <span t-esc="carta['fecha_corte']" t-options="{'widget': 'date'}" /> se le
+          efectuará corte del Servicio de Agua.
+        </p>
+        <p style="margin:0 0 6px 0;">
+          Se ruega hacer efectivo el pago correspondiente antes de esa fecha para evitar el corte del servicio
+          y el cobro de la tarifa de reconexión. Si ya realizó el pago, por favor haga caso omiso de la
+          presente notificación.
+        </p>
+        <p style="margin:0;">Atentamente,</p>
+      </div>
+
+      <div style="text-align:center; font-weight:bold; margin-top:10px;">JUNTA DIRECTIVA</div>
+    </div>
+  </template>
+
+  <!-- Template principal: 2 avisos por hoja (carta), apilados uno debajo del otro. Cada
+       hoja es su propio "article" (documento independiente), igual que en el proceso
+       masivo de recibos, para que wkhtmltopdf procese el PDF hoja por hoja. -->
+  <template id="report_corte_servicio_notificacion">
+    <t t-call="web.html_container">
+      <t t-foreach="paginas" t-as="pagina">
+        <div class="article">
+          <div t-attf-style="#{'' if pagina_last else 'page-break-after: always;'}">
+            <table style="width:200mm; height:269mm; border-collapse:separate; border-spacing:0 4mm; table-layout:fixed;">
+              <tr t-foreach="[0, 1]" t-as="slot">
+                <td style="height:50%; vertical-align:top; padding:0;">
+                  <t t-set="carta" t-value="pagina[slot] if len(pagina) > slot else False" />
+                  <t t-if="carta">
+                    <t t-call="iit_asovec.corte_servicio_carta_card" />
+                  </t>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </t>
+    </t>
+  </template>
+
+</odoo>

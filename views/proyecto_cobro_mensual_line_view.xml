@@ -21,7 +21,13 @@
           <field name="amount_balance" string="Saldo" />
 
           <!-- Cargo contable -->
-          <field name="move_id" string="Cargo" context="{'aso_only_number': True}" />
+          <!-- default_move_type: sin esto, al abrir el cargo desde este enlace interno
+               (en vez de por el menú normal de Facturación), la vista núcleo de Odoo
+               para invoice_line_ids no encuentra 'default_move_type' en el contexto y su
+               dominio de producto cae al 'or' (filtra por purchase_ok en vez de
+               sale_ok), ocultando todos los servicios de la Asociación del selector. -->
+          <field name="move_id" string="Cargo"
+            context="{'aso_only_number': True, 'default_move_type': 'out_invoice'}" />
           <field name="move_state" string="Estado cargo" widget="badge"
             decoration-info="move_state == 'draft'"
             decoration-success="move_state == 'posted'"
@@ -165,7 +171,7 @@
             <group string="Cargo contable">
               <group>
                 <field name="move_id"
-                  context="{'aso_only_number': True}"
+                  context="{'aso_only_number': True, 'default_move_type': 'out_invoice'}"
                   options="{'no_create': True, 'no_open': False}" />
 
                 <field name="move_state"
