@@ -37,6 +37,8 @@
         'views/account_move_view.xml',
         'views/account_payment_view.xml',
         'views/residencia_config_wizard_view.xml',
+        'views/proceso_corte_servicio_wizard_view.xml',
+        'views/orden_trabajo_view.xml',
         'views/menu_view.xml',
         'reports/estado_cuenta_report.xml',
         'reports/estado_cuenta_html_report.xml',
@@ -45,7 +47,9 @@
         'reports/recibo_residencia_mensual_masivo_report.xml',
         'reports/analisis_mensual_report.xml',
         'reports/cargo_residencia_report.xml',
-        'reports/residencia_config_html_report.xml'
+        'reports/residencia_config_html_report.xml',
+        'reports/corte_servicio_notificacion_report.xml',
+        'reports/orden_trabajo_report.xml'
     ],
     'assets': {
         'web.assets_backend': [

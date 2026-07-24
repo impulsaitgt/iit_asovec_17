@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="seq_asovec_orden_trabajo" model="ir.sequence">
+      <field name="name">Orden de Trabajo</field>
+      <field name="code">asovec.orden_trabajo</field>
+      <field name="prefix"></field>
+      <field name="padding">0</field>
+      <field name="number_increment">1</field>
+    </record>
+
+    <record id="view_asovec_orden_trabajo_tree" model="ir.ui.view">
+      <field name="name">asovec.orden_trabajo.tree</field>
+      <field name="model">asovec.orden_trabajo</field>
+      <field name="arch" type="xml">
+        <tree string="Órdenes de Trabajo" default_order="fecha_creacion desc, id desc">
+          <field name="name" string="Correlativo" />
+          <field name="concepto" />
+          <field name="residencia_id" string="Casa" />
+          <field name="colaborador_id" string="Colaborador" />
+          <field name="fecha_creacion" string="Fecha" />
+          <field name="reporte" />
+        </tree>
+      </field>
+    </record>
+
+    <record id="view_asovec_orden_trabajo_form" model="ir.ui.view">
+      <field name="name">asovec.orden_trabajo.form</field>
+      <field name="model">asovec.orden_trabajo</field>
+      <field name="arch" type="xml">
+        <form string="Orden de Trabajo">
+          <header>
+            <button name="action_imprimir" type="object" string="Imprimir" class="btn-primary" />
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <h1><field name="name" readonly="1" /></h1>
+            </div>
+            <group>
+              <group>
+                <field name="residencia_id" options="{'no_create': True}" />
+                <field name="fecha_creacion" />
+                <field name="creador_id" />
+              </group>
+              <group>
+                <field name="proyecto_aso_id" readonly="1" />
+                <field name="cliente_id" string="Nombre" readonly="1" />
+                <field name="direccion" readonly="1" />
+                <field name="telefono" readonly="1" />
+                <field name="colaborador_id" />
+              </group>
+            </group>
+            <separator string="Concepto" />
+            <field name="concepto" nolabel="1" />
+
+            <separator string="Reporte de campo" />
+            <field name="reporte" nolabel="1" />
+            <group>
+              <field name="fecha_finalizacion" />
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_asovec_orden_trabajo_search" model="ir.ui.view">
+      <field name="name">asovec.orden_trabajo.search</field>
+      <field name="model">asovec.orden_trabajo</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Órdenes de Trabajo">
+          <field name="name" string="Correlativo" />
+          <field name="residencia_id" string="Casa" />
+          <field name="concepto" />
+          <field name="colaborador_id" />
+          <filter string="Fecha" name="filtro_fecha" date="fecha_creacion" />
+          <group expand="0" string="Agrupar por">
+            <filter string="Proyecto" name="group_proyecto" context="{'group_by': 'proyecto_aso_id'}" />
+            <filter string="Colaborador" name="group_colaborador" context="{'group_by': 'colaborador_id'}" />
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <record id="orden_trabajo_action" model="ir.actions.act_window">
+      <field name="name">Órdenes de Trabajo</field>
+      <field name="res_model">asovec.orden_trabajo</field>
+      <field name="view_mode">tree,form</field>
+      <field name="search_view_id" ref="view_asovec_orden_trabajo_search" />
+    </record>
+
+  </data>
+</odoo>

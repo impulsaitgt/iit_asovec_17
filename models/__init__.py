@@ -26,3 +26,7 @@ from . import lectura_listado_wizard
 from . import cargo_residencia_report
 from . import residencia_config_wizard
 from . import residencia_config_report
+from . import proceso_corte_servicio_wizard
+from . import proceso_corte_servicio_report
+from . import orden_trabajo
+from . import orden_trabajo_report
