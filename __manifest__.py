@@ -36,6 +36,7 @@
         'views/lectura_listado_wizard_view.xml',
         'views/account_move_view.xml',
         'views/account_payment_view.xml',
+        'views/convenio_wizard_view.xml',
         'views/residencia_config_wizard_view.xml',
         'views/proceso_corte_servicio_wizard_view.xml',
         'views/orden_trabajo_view.xml',

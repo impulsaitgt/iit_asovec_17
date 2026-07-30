@@ -172,6 +172,17 @@ class Contador(models.Model):
         self._sync_residencia_active(residencia_ids_to_sync)
         return res
 
+    def _historial_lecturas_ordenado(self):
+        """Lecturas de este contador ordenadas de la más reciente a la más antigua,
+        dejando siempre de último el registro inicial (periodo_date=False, así que
+        con `fecha_min` como comodín siempre queda como la fecha "más antigua").
+        Usado tanto por el reporte de Estado de Cuenta por Residencia (impreso desde
+        Residencias) como por el historial de lecturas del Estado de Cuenta general
+        (Consultas)."""
+        self.ensure_one()
+        fecha_min = fields.Date.from_string("1900-01-01")
+        return self.line_ids.sorted(lambda l: (l.periodo_date or fecha_min, l.id), reverse=True)
+
     def action_activar(self):
         for rec in self:
             rec.active = True

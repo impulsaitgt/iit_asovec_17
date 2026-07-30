@@ -82,6 +82,34 @@ class AccountMove(models.Model):
                     "asociada a ningún detalle de cobro mensual: use otro diario."
                 ) % {"diario": move.journal_id.name})
 
+    @api.model
+    def _get_convenio_pendiente(self, residencia, exclude_move=None):
+        """Cargo de Convenio (diario con aso_convenio='Si') posteado y con saldo
+        pendiente para `residencia`, si existe (usado tanto por el wizard de Convenio
+        como por la validación al grabar directamente desde Facturación)."""
+        domain = [
+            ("residencia_id", "=", residencia.id),
+            ("journal_id.aso_convenio", "=", "Si"),
+            ("move_type", "=", "out_invoice"),
+            ("state", "=", "posted"),
+            ("amount_residual", ">", 0),
+        ]
+        if exclude_move:
+            domain.append(("id", "!=", exclude_move.id))
+        return self.search(domain, limit=1)
+
+    @api.constrains("residencia_id", "journal_id", "move_type", "state")
+    def _check_residencia_convenio_pendiente(self):
+        for move in self:
+            if move.move_type != "out_invoice" or move.journal_id.aso_convenio != "Si" or not move.residencia_id:
+                continue
+            pendiente = self._get_convenio_pendiente(move.residencia_id, exclude_move=move)
+            if pendiente:
+                raise ValidationError(_(
+                    "La Residencia '%(residencia)s' ya tiene un cargo de Convenio pendiente de "
+                    "pago (%(cargo)s). No puede tener más de un Convenio a la vez."
+                ) % {"residencia": move.residencia_id.display_name, "cargo": pendiente.name})
+
     @api.constrains("journal_id", "move_type")
     def _check_diario_cargo_migrado_reservado(self):
         """Un diario marcado 'Cargo Migrado = Si' solo se puede cargar desde el proceso

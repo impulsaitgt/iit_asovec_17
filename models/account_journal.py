@@ -27,6 +27,38 @@ class AccountJournal(models.Model):
              "Residencia válida. Desactívelo para diarios usados para otros controles "
              "donde no aplica el concepto de Residencia, aunque el cliente sea un residente.",
     )
+    aso_convenio = fields.Selection(
+        [('No', 'No'), ('Si', 'Si')], default='No', string='Convenio (Cargo Residencial)',
+        help="Diario reservado para los cargos de Convenio (menú Movimientos > "
+             "Convenio). Solo se puede activar en diarios de tipo Venta, y solo puede "
+             "haber un diario por compañía con este flag en 'Si'. No confundir con el "
+             "campo 'Convenio' de iit_soap_bi (soap_bi.convenio, agenda de pasarela de "
+             "pago): son conceptos distintos que solo comparten nombre.",
+    )
+
+    @api.constrains('aso_convenio', 'type')
+    def _check_convenio_solo_venta(self):
+        for rec in self:
+            if rec.aso_convenio == 'Si' and rec.type != 'sale':
+                raise ValidationError(
+                    "El flag 'Convenio' solo se puede activar en diarios de tipo Venta."
+                )
+
+    @api.constrains('aso_convenio', 'company_id')
+    def _check_convenio_unico(self):
+        for rec in self:
+            if rec.aso_convenio != 'Si':
+                continue
+            otros = self.search([
+                ('aso_convenio', '=', 'Si'),
+                ('company_id', '=', rec.company_id.id),
+                ('id', '!=', rec.id),
+            ])
+            if otros:
+                raise ValidationError(
+                    "Ya existe el Diario '%s' marcado como 'Convenio' para esta compañía. "
+                    "Solo puede haber uno." % otros[0].name
+                )
 
     @api.constrains('aso_cargo_automatico', 'company_id')
     def _check_cargo_automatico_unico(self):
