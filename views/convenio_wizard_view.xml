@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <record id="view_asovec_convenio_wizard_form" model="ir.ui.view">
+      <field name="name">asovec.convenio_wizard.form</field>
+      <field name="model">asovec.convenio_wizard</field>
+      <field name="arch" type="xml">
+        <form string="Crear Cargo de Convenio">
+          <sheet>
+            <group>
+              <field name="residencia_id" options="{'no_create': True}"/>
+              <field name="cliente_id"/>
+              <field name="proyecto_aso_id"/>
+              <field name="direccion"/>
+              <field name="currency_id" invisible="1"/>
+              <field name="monto"/>
+              <field name="fecha"/>
+            </group>
+
+            <footer>
+              <button name="action_crear_cargo" type="object" string="Crear Cargo" class="btn-primary"/>
+              <button string="Cancelar" special="cancel" class="btn-secondary"/>
+            </footer>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Vista standalone (no hereda de account.view_out_invoice_tree) de solo
+         consulta: sin "Nuevo" ni "Eliminar". Crear un cargo de Convenio se hace
+         siempre desde el wizard (menú Movimientos > Convenio), nunca desde esta
+         lista. -->
+    <record id="view_move_tree_convenio" model="ir.ui.view">
+      <field name="name">account.move.tree.convenio</field>
+      <field name="model">account.move</field>
+      <field name="arch" type="xml">
+        <tree string="Convenios" create="false" delete="false" import="false" decoration-muted="state == 'cancel'">
+          <field name="name"/>
+          <field name="invoice_date" string="Fecha"/>
+          <field name="invoice_partner_display_name" string="Residente"/>
+          <field name="residencia_id"/>
+          <field name="amount_total" sum="Total"/>
+          <field name="amount_residual" sum="Saldo"/>
+          <field name="payment_state"/>
+          <field name="state"/>
+          <field name="currency_id" column_invisible="1"/>
+        </tree>
+      </field>
+    </record>
+
+  </data>
+</odoo>

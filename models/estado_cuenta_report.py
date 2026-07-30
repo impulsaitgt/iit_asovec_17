@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import base64
+import calendar
+from datetime import date
 
 from odoo import api, fields, models
 from odoo.tools import image_process
@@ -10,6 +12,57 @@ LOGO_MAX_HEIGHT = 90
 class ReportEstadoCuenta(models.AbstractModel):
     _name = "report.iit_asovec.report_estado_cuenta_document"
     _description = "Estado de Cuenta (documento)"
+
+    def _historial_lecturas_residencias(self, residencias, mes=None, anio=None):
+        """Historial de lecturas (Período, Lectura, Lectura anterior, Consumo, Canon,
+        Exceso, Total) por cada residencia, en el mismo orden y formato que el Estado
+        de Cuenta por Residencia impreso desde Residencias (más reciente arriba,
+        registro inicial siempre de último), pero sin las columnas de Facturación/Pago:
+        aquí es solo consulta de lecturas, no de cobranza.
+
+        Si se pasan `mes`/`anio` (el Período del wizard, solo cuando el usuario activó
+        "Aplicar también al Historial de Lecturas"), se limita a esa lectura mensual;
+        el registro inicial (sin mes/año) queda naturalmente excluido en ese caso, ya
+        que no pertenece a ningún período. Sin `mes`/`anio` se muestra todo el
+        histórico, comportamiento por defecto."""
+        bloques = []
+        for residencia in residencias:
+            contador = residencia._get_contador_activo()
+            lineas = contador._historial_lecturas_ordenado() if contador else self.env["asovec.contador.lines"]
+            if mes and anio:
+                lineas = lineas.filtered(lambda l: not l.es_inicial and l.mes == mes and int(l.anio or 0) == int(anio))
+            bloques.append({
+                "residencia": residencia,
+                "contador": contador,
+                "lineas": lineas,
+            })
+        return bloques
+
+    def _filtrar_por_periodo(self, entradas, mes, anio):
+        """A partir de `entradas` de una residencia (ya ordenadas cronológicamente,
+        con su saldo acumulado calculado sobre TODO el histórico), calcula el Saldo
+        Inicial (lo acumulado antes del período), las entradas a mostrar y el Saldo
+        Final (al cierre del período), para el Mes/Año dado.
+
+        Sin `mes`/`anio` (comportamiento por defecto) no filtra nada: Saldo Inicial es
+        0.0 (se muestra todo desde el principio) y Saldo Final es el saldo del último
+        movimiento (el saldo actual), igual que antes de agregar esta lógica de
+        período."""
+        if not entradas:
+            return 0.0, [], 0.0
+        if not (mes and anio):
+            return 0.0, entradas, entradas[-1]["saldo_acumulado"]
+
+        inicio = date(int(anio), int(mes), 1)
+        fin = date(int(anio), int(mes), calendar.monthrange(int(anio), int(mes))[1])
+
+        anteriores = [e for e in entradas if (e["date"] or inicio) < inicio]
+        del_periodo = [e for e in entradas if inicio <= (e["date"] or inicio) <= fin]
+
+        saldo_inicial = anteriores[-1]["saldo_acumulado"] if anteriores else 0.0
+        saldo_final = del_periodo[-1]["saldo_acumulado"] if del_periodo else saldo_inicial
+
+        return saldo_inicial, del_periodo, saldo_final
 
     def _payment_tiene_convenio(self):
         """El campo 'convenio_id' en account.payment lo agrega el módulo opcional
@@ -183,10 +236,21 @@ class ReportEstadoCuenta(models.AbstractModel):
         historial de un residente aunque su saldo final sea cero."""
         wizard.ensure_one()
         residencias = wizard.residencia_ids
+        periodo_activo = bool(wizard.filtrar_por_periodo and wizard.mes_periodo and wizard.anio_periodo)
+        mes_filtro = wizard.mes_periodo if periodo_activo else None
+        anio_filtro = wizard.anio_periodo if periodo_activo else None
 
         movimientos = []
+        saldo_inicial = 0.0
+        saldo_final = 0.0
         for index, residencia in enumerate(residencias):
-            movimientos += self._movimientos_residencia(wizard, residencia, incluir_creditos_sueltos=(index == 0))
+            entradas = self._movimientos_residencia(wizard, residencia, incluir_creditos_sueltos=(index == 0))
+            s_inicial, entradas_mostradas, s_final = self._filtrar_por_periodo(
+                entradas, mes_filtro, anio_filtro
+            )
+            saldo_inicial += s_inicial
+            saldo_final += s_final
+            movimientos += entradas_mostradas
 
         cargos = [m for m in movimientos if m["tipo"] == "Cargo"]
         resumen = {
@@ -194,7 +258,11 @@ class ReportEstadoCuenta(models.AbstractModel):
             "cantidad_cargos": len(cargos),
             "total_facturado": sum(m["debe"] for m in movimientos),
             "total_pagado": sum(m["haber"] for m in movimientos),
-            "total_saldo": sum(m["debe"] - m["haber"] for m in movimientos),
+            # Coincide con `saldo_final` (la suma de saldos finales por residencia es
+            # matemáticamente igual a sumar debe-haber de todas las entradas
+            # mostradas), pero usa `saldo_final` directamente para que sea correcto
+            # también cuando el período está activo y hay saldo_inicial != 0.
+            "total_saldo": saldo_final,
             "cantidad_asociacion": len([m for m in cargos if m["aso_cargo"] == "Si"]),
             "cantidad_automatico": len([m for m in cargos if m["aso_cargo_automatico"] == "Si"]),
             "cantidad_sin_aplicar": len([m for m in movimientos if m["tipo"] == "Pago" and not m["aplicado"]]),
@@ -203,9 +271,14 @@ class ReportEstadoCuenta(models.AbstractModel):
         currency = (movimientos[0]["currency"] if movimientos else False) or wizard.env.company.currency_id
         generated_at_dt = fields.Datetime.context_timestamp(wizard, fields.Datetime.now())
 
+        lecturas_periodo_activo = bool(periodo_activo and wizard.aplicar_periodo_lecturas)
+        mes_lecturas = wizard.mes_periodo if lecturas_periodo_activo else None
+        anio_lecturas = wizard.anio_periodo if lecturas_periodo_activo else None
+
         return {
             "proyecto": residencias[:1].proyecto_aso_id,
             "residencias": residencias,
+            "direcciones": ", ".join(filter(None, residencias.mapped("direccion_real"))),
             "cliente": wizard.cliente_id,
             "solo_residente_actual": wizard.solo_residente_actual,
             "generated_at": generated_at_dt.strftime("%d/%m/%Y %H:%M"),
@@ -213,6 +286,15 @@ class ReportEstadoCuenta(models.AbstractModel):
             "resumen": resumen,
             "currency": currency,
             "tiene_convenio": self._payment_tiene_convenio(),
+            "historial_lecturas": self._historial_lecturas_residencias(residencias, mes_lecturas, anio_lecturas),
+            "periodo_activo": periodo_activo,
+            "periodo_label": (
+                "%s %s" % (dict(wizard._fields["mes_periodo"].selection).get(wizard.mes_periodo), wizard.anio_periodo)
+                if periodo_activo else False
+            ),
+            "lecturas_periodo_activo": lecturas_periodo_activo,
+            "saldo_inicial": saldo_inicial,
+            "saldo_final": saldo_final,
         }
 
     @api.model

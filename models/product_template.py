@@ -20,6 +20,13 @@ class product_template(models.Model):
     aso_agua_base = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_base", string="Servicio Agua Base", store=False, readonly=True)
     aso_agua_exceso = fields.Boolean(related="tipo_servicio_aso_id.aso_agua_exceso", string="Servicio Agua Exceso", store=False, readonly=True)
     aso_migrado = fields.Boolean(related="tipo_servicio_aso_id.aso_migrado", string="Servicio Migrado", store=False, readonly=True)
+    aso_convenio = fields.Boolean(
+        string='Servicio de Convenio',
+        default=False,
+        help="Marca este Servicio de Asociación como el usado para los cargos de "
+             "Convenio (menú Movimientos > Convenio). Solo puede haber un Servicio "
+             "con este flag activo por compañía.",
+    )
 
 
 
@@ -34,4 +41,27 @@ class product_template(models.Model):
             if rec.aso_es_servicio_aso and rec.detailed_type != 'service':
                 raise ValidationError(
                     'Para marcar "Servicio ASO", el producto debe ser de tipo Servicio.'
+                )
+
+    @api.constrains('aso_convenio', 'aso_es_servicio_aso')
+    def _check_aso_convenio_solo_servicio_aso(self):
+        for rec in self:
+            if rec.aso_convenio and not rec.aso_es_servicio_aso:
+                raise ValidationError(
+                    'Para marcar "Servicio de Convenio", el producto debe ser un Servicio de Asociación.'
+                )
+
+    @api.constrains('aso_convenio', 'company_id')
+    def _check_aso_convenio_unico(self):
+        for rec in self:
+            if not rec.aso_convenio:
+                continue
+            domain = [('aso_convenio', '=', True), ('id', '!=', rec.id)]
+            if rec.company_id:
+                domain += ['|', ('company_id', '=', rec.company_id.id), ('company_id', '=', False)]
+            otros = self.search(domain)
+            if otros:
+                raise ValidationError(
+                    'Ya existe el Servicio "%s" marcado como "Servicio de Convenio" para esta compañía. '
+                    'Solo puede haber uno.' % otros[0].name
                 )

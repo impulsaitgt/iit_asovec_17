@@ -116,6 +116,31 @@
         <field name="target">new</field>
     </record>
 
+    <record id="asovec_convenio_wizard_action" model="ir.actions.act_window">
+        <field name="name">Crear Cargo de Convenio</field>
+        <field name="res_model">asovec.convenio_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Solo consulta (view_move_tree_convenio tiene create/delete/import="false"):
+         crear un cargo de Convenio siempre es por el wizard en Movimientos > Convenio.
+         Por defecto sale filtrado "Sin pagar" (filtro 'open' del buscador estándar de
+         facturas) y agrupado por Residencia (filtro 'group_residencia_aso' agregado en
+         view_account_invoice_filter_asovec_residencia, account_move_view.xml). -->
+    <record id="action_account_move_convenio" model="ir.actions.act_window">
+        <field name="name">Consulta de Convenios</field>
+        <field name="res_model">account.move</field>
+        <field name="view_mode">tree,form</field>
+        <field name="views" eval="[(ref('view_move_tree_convenio'), 'tree'), (False, 'form')]"/>
+        <field name="domain">[('journal_id.aso_convenio', '=', 'Si'), ('move_type', '=', 'out_invoice')]</field>
+        <field name="context">{
+            'default_move_type': 'out_invoice',
+            'search_default_open': 1,
+            'search_default_group_residencia_aso': 1,
+        }</field>
+    </record>
+
 
     <menuitem name="Asociacion de Vecinos" id="asovec_menu" />
     <menuitem name="Asociacion" id="asociacion_menu" parent="asovec_menu" sequence="10" />
@@ -155,6 +180,10 @@
         action="account.action_move_out_invoice_type" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
     <menuitem name="Pagos" id="pagos_opcion" parent="movimientos_menu"
         action="account.action_account_payments" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
+    <!-- Va directo al wizard (target=new): crear un cargo de Convenio siempre pasa
+         por ahí, nunca por un formulario de factura suelto ni por una lista. -->
+    <menuitem name="Convenio" id="movimientos_convenio_opcion" parent="movimientos_menu" sequence="30"
+        action="asovec_convenio_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
 
     <menuitem name="Órdenes de Trabajo" id="orden_trabajo_menu" parent="asovec_menu" sequence="45" />
     <menuitem name="Órdenes de Trabajo" id="orden_trabajo_opcion" parent="orden_trabajo_menu"
@@ -184,6 +213,10 @@
         parent="consultas_menu" action="proceso_analisis_mensual_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_temporal_implementacion" />
     <menuitem name="Configuración de Residencias" id="residencia_config_opcion"
         parent="consultas_menu" action="residencia_config_wizard_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
+    <!-- Consulta de solo lectura de los cargos de Convenio (crear uno nuevo siempre
+         es por el wizard en Movimientos > Convenio, no desde aquí). -->
+    <menuitem name="Consulta de Convenios" id="consultas_convenio_opcion"
+        parent="consultas_menu" action="action_account_move_convenio" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
 
     <!-- Exportaciones a archivo, separadas de "Consultas" (que son reportes en
          pantalla) para no mezclar ambos tipos de acción en el mismo menú. -->

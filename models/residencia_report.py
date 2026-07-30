@@ -31,16 +31,12 @@ class ReportEstadoCuentaResidenciaLecturas(models.AbstractModel):
         residencias = self.env["asovec.residencia"].browse(docids)
 
         report_docs = []
-        fecha_min = fields.Date.from_string("1900-01-01")
 
         for res in residencias:
             contador = res._get_contador_activo()
 
             lecturas = (
-                contador.line_ids.sorted(
-                    lambda l: (l.periodo_date or fecha_min, l.id),
-                    reverse=True
-                )
+                contador._historial_lecturas_ordenado()
                 if contador else self.env["asovec.contador.lines"]
             )
 

@@ -52,6 +52,7 @@
                     }
                     .btn-pdf { background: #c62828; }
                     .btn-excel { background: #2e7d32; }
+                    .btn-params { background: #546e7a; }
 
                     .generated-note {
                         background: #fff8e1;
@@ -160,10 +161,16 @@
                                             — <t t-esc="', '.join(residencias.mapped('display_name'))" />
                                             — <t t-esc="company.name" />
                                         </div>
+                                        <div class="subtitulo" style="margin-top: 2px;">
+                                            <t t-esc="direcciones" />
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
                             <div class="toolbar">
+                                <a class="btn-download btn-params"
+                                    t-attf-href="/web#action=iit_asovec.cobro_mensual_consulta_wizard_action&amp;id=#{docs.id}&amp;model=asovec.cobro_mensual_consulta_wizard&amp;view_type=form"
+                                    target="_blank" title="Vuelve a abrir el wizard (con sus botones) con los mismos datos con los que se generó esta consulta, para modificar el criterio o el período y consultar de nuevo.">Parámetros</a>
                                 <a class="btn-download btn-pdf"
                                     t-attf-href="/report/pdf/iit_asovec.estado_cuenta_pdf/#{docs.id}"
                                     target="_blank">Descargar PDF</a>
@@ -179,6 +186,12 @@
                         movimientos (cargos y pagos aplicados) con saldo acumulado, hasta ese momento;
                         movimientos posteriores a esta fecha y hora no están reflejados aquí.
                         <t t-if="solo_residente_actual"> Se muestran únicamente los movimientos del residente actual.</t>
+                        <t t-if="periodo_activo">
+                            Filtrado al período <strong t-esc="periodo_label" />: los Movimientos muestran
+                            solo ese mes, con Saldo Inicial y Saldo Final.
+                            <t t-if="lecturas_periodo_activo"> El Historial de Lecturas también está limitado a ese período.</t>
+                            <t t-if="not lecturas_periodo_activo"> El Historial de Lecturas sigue mostrando todo el histórico.</t>
+                        </t>
                         <t t-if="resumen['cantidad_sin_aplicar']">
                             <span class="sin-aplicar-flag" style="margin-left: 0; margin-right: 6px;"></span>Pago no conciliado a ningún cargo (crédito a favor).
                         </t>
@@ -190,20 +203,24 @@
                             <div class="kpi-label">Residencias</div>
                             <div class="kpi-value"><t t-esc="resumen['cantidad_residencias']" /></div>
                         </div>
+                        <div class="kpi-card" t-if="periodo_activo">
+                            <div class="kpi-label">Saldo Inicial</div>
+                            <div class="kpi-value"><t t-esc="'{:,.2f}'.format(saldo_inicial)" /></div>
+                        </div>
                         <div class="kpi-card">
                             <div class="kpi-label">Cargos</div>
                             <div class="kpi-value"><t t-esc="resumen['cantidad_cargos']" /></div>
                         </div>
                         <div class="kpi-card">
-                            <div class="kpi-label">Total facturado</div>
+                            <div class="kpi-label" t-esc="'Facturado en el período' if periodo_activo else 'Total facturado'" />
                             <div class="kpi-value"><t t-esc="'{:,.2f}'.format(resumen['total_facturado'])" /></div>
                         </div>
                         <div class="kpi-card pagado">
-                            <div class="kpi-label">Total pagado</div>
+                            <div class="kpi-label" t-esc="'Pagado en el período' if periodo_activo else 'Total pagado'" />
                             <div class="kpi-value"><t t-esc="'{:,.2f}'.format(resumen['total_pagado'])" /></div>
                         </div>
                         <div class="kpi-card saldo">
-                            <div class="kpi-label">Saldo pendiente</div>
+                            <div class="kpi-label" t-esc="'Saldo Final' if periodo_activo else 'Saldo pendiente'" />
                             <div class="kpi-value"><t t-esc="'{:,.2f}'.format(resumen['total_saldo'])" /></div>
                         </div>
                         <div class="kpi-card asociacion">
@@ -216,7 +233,10 @@
                         </div>
                     </div>
 
-                    <div class="section-title">Movimientos (cargos y pagos)</div>
+                    <div class="section-title">
+                        Movimientos (cargos y pagos)
+                        <t t-if="periodo_activo"> — Período <t t-esc="periodo_label" /></t>
+                    </div>
                     <div class="tab-content">
                         <table class="tabla-datos">
                             <thead>
@@ -234,6 +254,14 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr t-if="periodo_activo" style="background:#f0f7f7;">
+                                    <td class="text-left" t-attf-colspan="#{5 + (len(residencias) &gt; 1 and 1 or 0) + (tiene_convenio and 1 or 0)}">
+                                        <strong>Saldo Inicial</strong>
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                    <td><strong t-esc="'%s %s' % ((currency and currency.symbol) or '', '{:,.2f}'.format(saldo_inicial))" /></td>
+                                </tr>
                                 <t t-foreach="movimientos" t-as="m">
                                     <t t-set="msym" t-value="(m['currency'] and m['currency'].symbol) or (currency and currency.symbol) or ''" />
                                     <tr t-attf-class="#{m['tipo'] == 'Pago' and 'mov-pago' or ''}">
@@ -269,7 +297,9 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td t-attf-colspan="#{5 + (len(residencias) &gt; 1 and 1 or 0) + (tiene_convenio and 1 or 0)}" class="text-left">Totales</td>
+                                    <td t-attf-colspan="#{5 + (len(residencias) &gt; 1 and 1 or 0) + (tiene_convenio and 1 or 0)}" class="text-left">
+                                        <t t-esc="'Saldo Final' if periodo_activo else 'Totales'" />
+                                    </td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_facturado'])" /></td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_pagado'])" /></td>
                                     <td><t t-esc="'{:,.2f}'.format(resumen['total_saldo'])" /></td>
@@ -277,6 +307,51 @@
                             </tfoot>
                         </table>
                     </div>
+
+                    <t t-foreach="historial_lecturas" t-as="bloque">
+                        <div class="section-title">
+                            Historial de Lecturas
+                            <t t-if="len(residencias) &gt; 1"> — <t t-esc="bloque['residencia'].display_name" /></t>
+                            <t t-if="lecturas_periodo_activo"> — Período <t t-esc="periodo_label" /></t>
+                        </div>
+                        <div class="tab-content">
+                            <table class="tabla-datos">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">Período</th>
+                                        <th>Lectura</th>
+                                        <th>Lectura anterior</th>
+                                        <th>Consumo</th>
+                                        <th>Canon de agua</th>
+                                        <th>Exceso (pago extra)</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="bloque['lineas']" t-as="ln">
+                                        <t t-set="lsym" t-value="(ln.currency_id and ln.currency_id.symbol) or (currency and currency.symbol) or ''" />
+                                        <tr>
+                                            <td class="text-left">
+                                                <t t-if="ln.es_inicial">Registro Inicial</t>
+                                                <t t-else="">
+                                                    <t t-esc="dict(ln._fields['mes'].selection).get(ln.mes, ln.mes)" /> <t t-esc="ln.anio" />
+                                                </t>
+                                            </td>
+                                            <td><t t-esc="'{:,.2f}'.format(ln.lectura or 0.0)" /></td>
+                                            <td><t t-esc="'{:,.2f}'.format(ln.lectura_anterior or 0.0)" /></td>
+                                            <td><t t-esc="'{:,.2f}'.format(ln.consumo or 0.0)" /></td>
+                                            <td><t t-esc="'%s %s' % (lsym, '{:,.2f}'.format(ln.base or 0.0))" /></td>
+                                            <td><t t-esc="'%s %s' % (lsym, '{:,.2f}'.format(ln.pago_extra or 0.0))" /></td>
+                                            <td><strong t-esc="'%s %s' % (lsym, '{:,.2f}'.format(ln.pago_total or 0.0))" /></td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="not bloque['lineas']">
+                                        <tr><td colspan="7" class="text-left">Sin lecturas registradas.</td></tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
                 </main>
             </body>
         </html>

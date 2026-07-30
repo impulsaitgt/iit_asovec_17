@@ -7,7 +7,10 @@ import xlsxwriter
 from odoo import api, models, fields, _
 from odoo.exceptions import UserError
 
+from .contador import MONTH_SELECTION
+
 _INVALID_FILENAME_CHARS = set('\\/:*?"<>|')
+_MONTH_LABELS = dict(MONTH_SELECTION)
 
 
 class CobroMensualConsultaWizard(models.TransientModel):
@@ -43,6 +46,31 @@ class CobroMensualConsultaWizard(models.TransientModel):
     )
     solo_residente_actual = fields.Boolean(string="Solo movimientos del residente actual", default=True)
 
+    filtrar_por_periodo = fields.Boolean(
+        string="Filtrar por Período",
+        default=False,
+        help="Por defecto el Estado de Cuenta muestra todo el histórico. Actívelo para "
+             "mostrar solo el Mes/Año indicados, con Saldo Inicial (lo acumulado antes "
+             "del período) y Saldo Final (al cierre del período).",
+    )
+    mes_periodo = fields.Selection(
+        MONTH_SELECTION, string="Mes",
+        default=lambda self: str(fields.Date.context_today(self).month),
+        help="Se sugiere el mes actual; cámbielo si necesita otro período. Solo aplica "
+             "si 'Filtrar por Período' está activo.",
+    )
+    anio_periodo = fields.Integer(
+        string="Año",
+        default=lambda self: fields.Date.context_today(self).year,
+    )
+    aplicar_periodo_lecturas = fields.Boolean(
+        string="Aplicar también al Historial de Lecturas",
+        default=False,
+        help="Por defecto el Período solo filtra los Movimientos (cargos y pagos); el "
+             "Historial de Lecturas sigue mostrando todo el histórico. Actívelo para "
+             "que el Historial de Lecturas también se limite al Mes/Año del Período.",
+    )
+
     file_data = fields.Binary(string="Archivo Excel", readonly=True)
     file_name = fields.Char(string="Nombre de archivo", readonly=True)
 
@@ -57,6 +85,12 @@ class CobroMensualConsultaWizard(models.TransientModel):
         for rec in self:
             if len(rec.residencia_ids.mapped("cliente_id")) > 1:
                 raise UserError(_("Todas las residencias seleccionadas deben pertenecer al mismo residente."))
+
+    @api.constrains("filtrar_por_periodo", "mes_periodo", "anio_periodo")
+    def _check_periodo_completo(self):
+        for rec in self:
+            if rec.filtrar_por_periodo and not (rec.mes_periodo and rec.anio_periodo):
+                raise UserError(_("Para filtrar por Período debe indicar tanto el Mes como el Año."))
 
     @api.onchange("residencia_ids")
     def _onchange_residencia_ids(self):
@@ -156,15 +190,24 @@ class CobroMensualConsultaWizard(models.TransientModel):
 
         worksheet.write(0, 0, "Estado de Cuenta", fmt_titulo)
         worksheet.write(1, 0, "%s — Generado: %s" % (datos["cliente"].name or "", datos["generated_at"]), fmt_subtitulo)
-        row = 2
+        worksheet.write(2, 0, "Dirección(es): %s" % (datos["direcciones"] or ""), fmt_subtitulo)
+        row = 3
+        if datos["periodo_activo"]:
+            worksheet.write(row, 0, "Período: %s" % datos["periodo_label"], fmt_subtitulo)
+            row += 1
         if datos["resumen"]["cantidad_sin_aplicar"]:
             worksheet.write_rich_string(row, 0, fmt_dot, "●", "  Pago no conciliado a ningún cargo (crédito a favor).", fmt_subtitulo)
+            row += 1
 
-        row = 3
         for texto, _ancho in columnas:
             worksheet.write(row, col[texto], texto, fmt_header)
         header_row = row
         row += 1
+
+        if datos["periodo_activo"]:
+            worksheet.write(row, col["Referencia Cliente"], "Saldo Inicial", fmt_total_label)
+            worksheet.write(row, col["Saldo Acumulado"], datos["saldo_inicial"], fmt_total_dinero)
+            row += 1
 
         for mov in datos["movimientos"]:
             worksheet.write_datetime(row, col["Fecha"], mov["date"], fmt_fecha) if mov["date"] else worksheet.write(row, col["Fecha"], "")
@@ -185,12 +228,53 @@ class CobroMensualConsultaWizard(models.TransientModel):
             worksheet.write(row, col["Estado"], mov["state"] or "")
             row += 1
 
-        worksheet.write(row, col["Referencia Cliente"], "Totales", fmt_total_label)
+        worksheet.write(row, col["Referencia Cliente"], "Saldo Final" if datos["periodo_activo"] else "Totales", fmt_total_label)
         worksheet.write(row, col["Debe"], datos["resumen"]["total_facturado"], fmt_total_dinero)
         worksheet.write(row, col["Haber"], datos["resumen"]["total_pagado"], fmt_total_dinero)
         worksheet.write(row, col["Saldo Acumulado"], datos["resumen"]["total_saldo"], fmt_total_dinero)
 
         worksheet.freeze_panes(header_row + 1, 0)
+
+        # --------------------
+        # Hoja "Historial de Lecturas": Período, Lectura, Lectura anterior, Consumo,
+        # Canon de agua, Exceso (pago extra) y Total, sin Facturación/Pago (es solo
+        # consulta de lecturas). Igual orden que en HTML/por-residencia: más reciente
+        # arriba, registro inicial siempre de último (ver
+        # asovec.contador._historial_lecturas_ordenado).
+        # --------------------
+        ws2 = workbook.add_worksheet("Historial de Lecturas")
+        columnas2 = [
+            ("Residencia", 22), ("Período", 16), ("Lectura", 12), ("Lectura anterior", 16),
+            ("Consumo", 12), ("Canon de agua", 16), ("Exceso (pago extra)", 18), ("Total", 14),
+        ]
+        col2 = {nombre: idx for idx, (nombre, _ancho) in enumerate(columnas2)}
+        for idx, (_nombre, ancho) in enumerate(columnas2):
+            ws2.set_column(idx, idx, ancho)
+
+        ws2.write(0, 0, "Historial de Lecturas", fmt_titulo)
+        if datos["lecturas_periodo_activo"]:
+            ws2.write(1, 0, "Período: %s" % datos["periodo_label"], fmt_subtitulo)
+        row2 = 2
+        for texto, _ancho in columnas2:
+            ws2.write(row2, col2[texto], texto, fmt_header)
+        header_row2 = row2
+        row2 += 1
+
+        for bloque in datos["historial_lecturas"]:
+            for ln in bloque["lineas"]:
+                periodo = "Registro Inicial" if ln.es_inicial else "%s %s" % (_MONTH_LABELS.get(ln.mes, ln.mes or ""), ln.anio or "")
+                ws2.write(row2, col2["Residencia"], bloque["residencia"].name or "")
+                ws2.write(row2, col2["Período"], periodo)
+                ws2.write(row2, col2["Lectura"], ln.lectura or 0.0, fmt_dinero)
+                ws2.write(row2, col2["Lectura anterior"], ln.lectura_anterior or 0.0, fmt_dinero)
+                ws2.write(row2, col2["Consumo"], ln.consumo or 0.0, fmt_dinero)
+                ws2.write(row2, col2["Canon de agua"], ln.base or 0.0, fmt_dinero)
+                ws2.write(row2, col2["Exceso (pago extra)"], ln.pago_extra or 0.0, fmt_dinero)
+                ws2.write(row2, col2["Total"], ln.pago_total or 0.0, fmt_dinero)
+                row2 += 1
+
+        ws2.freeze_panes(header_row2 + 1, 0)
+
         workbook.close()
         buffer.seek(0)
 

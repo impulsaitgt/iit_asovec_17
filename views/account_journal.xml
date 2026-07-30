@@ -11,6 +11,7 @@
                     <field name="aso_cargo_migrado"/>
                     <field name="aso_cargo_automatico"/>
                     <field name="aso_valida_residencia"/>
+                    <field name="aso_convenio"/>
                 </group>
             </xpath>
         </field>

@@ -26,15 +26,24 @@
             <div style="margin-bottom: 8px;">
               <strong>Proyecto:</strong> <span t-esc="proyecto.display_name"/><br/>
               <strong>Residencia(s):</strong> <span t-esc="', '.join(residencias.mapped('display_name'))"/><br/>
+              <strong>Dirección(es):</strong> <span t-esc="direcciones"/><br/>
               <strong t-if="cliente">Residente:</strong> <span t-if="cliente" t-esc="cliente.name"/>
               <t t-if="cliente"><br/></t>
+              <strong t-if="periodo_activo">Período:</strong> <span t-if="periodo_activo" t-esc="periodo_label"/>
+              <t t-if="periodo_activo"><br/></t>
               <strong>Generado:</strong> <span t-esc="generated_at"/>
             </div>
 
             <div style="margin-bottom: 14px; padding: 8px 12px; background: #fff8e1; border-left: 3px solid #b8860b; font-size: 11px;">
-              Se muestran todos los movimientos (cargos y pagos aplicados) con saldo acumulado,
-              hasta la fecha y hora de generación indicada arriba; movimientos posteriores no
-              están reflejados.
+              <t t-if="periodo_activo">
+                Se muestran los movimientos (cargos y pagos aplicados) del período indicado arriba,
+                con Saldo Inicial y Saldo Final.
+              </t>
+              <t t-if="not periodo_activo">
+                Se muestran todos los movimientos (cargos y pagos aplicados) con saldo acumulado,
+                hasta la fecha y hora de generación indicada arriba; movimientos posteriores no
+                están reflejados.
+              </t>
               <t t-if="solo_residente_actual"> Se muestran únicamente los movimientos del residente actual.</t>
               <t t-if="resumen['cantidad_sin_aplicar']"> <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#c62828;"></span> Pago no conciliado a ningún cargo (crédito a favor).</t>
             </div>
@@ -58,6 +67,14 @@
                 </tr>
               </thead>
               <tbody>
+                <tr t-if="periodo_activo">
+                  <td t-attf-colspan="#{5 + (len(residencias) &gt; 1 and 1 or 0) + (tiene_convenio and 1 or 0)}"><strong>Saldo Inicial</strong></td>
+                  <td class="text-end"></td>
+                  <td class="text-end"></td>
+                  <td class="text-end">
+                    <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(saldo_inicial or 0.0))).strip()"/>
+                  </td>
+                </tr>
                 <t t-foreach="movimientos" t-as="m">
                   <t t-set="msym" t-value="(m['currency'] and m['currency'].symbol) or cur_symbol"/>
                   <tr>
@@ -89,20 +106,26 @@
             <!-- Totales -->
             <div style="margin-top: 14px; width: 40%; margin-left: auto;">
               <table class="table table-sm" style="width:100%;">
+                <tr t-if="periodo_activo">
+                  <td><strong>Saldo Inicial</strong></td>
+                  <td class="text-end">
+                    <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(saldo_inicial or 0.0))).strip()"/>
+                  </td>
+                </tr>
                 <tr>
-                  <td><strong>Total cargos</strong></td>
+                  <td><strong t-esc="'Cargos del período' if periodo_activo else 'Total cargos'"/></td>
                   <td class="text-end">
                     <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(resumen['total_facturado'] or 0.0))).strip()"/>
                   </td>
                 </tr>
                 <tr>
-                  <td><strong>Total pagado</strong></td>
+                  <td><strong t-esc="'Pagos del período' if periodo_activo else 'Total pagado'"/></td>
                   <td class="text-end">
                     <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(resumen['total_pagado'] or 0.0))).strip()"/>
                   </td>
                 </tr>
                 <tr>
-                  <td><strong>Saldo total</strong></td>
+                  <td><strong t-esc="'Saldo Final' if periodo_activo else 'Saldo total'"/></td>
                   <td class="text-end">
                     <strong t-esc="('%s %s' % (cur_symbol, '{:,.2f}'.format(resumen['total_saldo'] or 0.0))).strip()"/>
                   </td>

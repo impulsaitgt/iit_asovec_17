@@ -10,13 +10,20 @@
         <form string="Estado de Cuenta">
           <sheet>
             <group>
-              <field name="buscar_cliente_id" string="Buscar por Residente"
-                help="Úselo si no conoce el proyecto o la residencia: sugiere automáticamente todas sus residencias."/>
-              <field name="proyecto_aso_id"/>
               <field name="residencia_ids" widget="many2many_tags"
                 options="{'no_create': True}"/>
+              <field name="buscar_cliente_id" string="Buscar por Residente"
+                help="Úselo si no conoce el proyecto o la residencia: sugiere automáticamente todas sus residencias."/>
               <field name="cliente_id" string="Residente" readonly="1"/>
+              <field name="proyecto_aso_id"/>
               <field name="solo_residente_actual" invisible="not residencia_ids"/>
+            </group>
+
+            <group string="Período (opcional)">
+              <field name="filtrar_por_periodo"/>
+              <field name="mes_periodo" invisible="not filtrar_por_periodo"/>
+              <field name="anio_periodo" invisible="not filtrar_por_periodo"/>
+              <field name="aplicar_periodo_lecturas" invisible="not filtrar_por_periodo"/>
             </group>
 
             <group invisible="not file_data">
