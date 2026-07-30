@@ -19,6 +19,9 @@ class Residencia(models.Model):
     contadores_ids = fields.One2many(comodel_name='asovec.contador', inverse_name='residencia_id', string='Contadores')
     contador_count = fields.Integer(string="Contadores", compute="_compute_contador_count")
     lectura_count = fields.Integer(string="Lecturas", compute="_compute_lectura_count")
+    movimiento_count = fields.Integer(string="Movimientos", compute="_compute_movimiento_count")
+    cargo_pendiente_count = fields.Integer(string="Cargos Pendientes", compute="_compute_cargo_pendiente_count")
+    pago_count = fields.Integer(string="Pagos", compute="_compute_pago_count")
     activo = fields.Boolean(string='Activo', default=True)
     no_paga_servicios = fields.Boolean(
         string='No paga servicios',
@@ -220,6 +223,82 @@ class Residencia(models.Model):
             rec.lectura_count = Line.search_count([
                 ('residencia_id', '=', rec.id), ('contador_id.active', '=', True),
             ])
+
+    def _compute_movimiento_count(self):
+        """Cuenta los apuntes de la cuenta por cobrar (una línea por cargo y una por
+        pago aplicado, igual al criterio que usa el Estado de Cuenta) ligados a esta
+        residencia, ya sea a través de la factura (cargo) o del pago (abono)."""
+        Line = self.env['account.move.line'].sudo()
+        for rec in self:
+            rec.movimiento_count = Line.search_count([
+                ('account_id.account_type', '=', 'asset_receivable'),
+                '|',
+                ('move_id.residencia_id', '=', rec.id),
+                ('payment_id.residencia_id', '=', rec.id),
+            ])
+
+    def _compute_cargo_pendiente_count(self):
+        Move = self.env['account.move'].sudo()
+        for rec in self:
+            rec.cargo_pendiente_count = Move.search_count([
+                ('residencia_id', '=', rec.id),
+                ('move_type', '=', 'out_invoice'),
+                ('state', '=', 'posted'),
+                ('amount_residual', '>', 0),
+            ])
+
+    def _compute_pago_count(self):
+        Payment = self.env['account.payment'].sudo()
+        for rec in self:
+            rec.pago_count = Payment.search_count([
+                ('residencia_id', '=', rec.id),
+                ('state', '=', 'posted'),
+                ('payment_type', '=', 'inbound'),
+            ])
+
+    def action_ver_movimientos(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Movimientos (Cargos y Abonos)',
+            'res_model': 'account.move.line',
+            'view_mode': 'tree,form',
+            'domain': [
+                ('account_id.account_type', '=', 'asset_receivable'),
+                '|',
+                ('move_id.residencia_id', '=', self.id),
+                ('payment_id.residencia_id', '=', self.id),
+            ],
+        }
+
+    def action_ver_cargos_pendientes(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Cargos Pendientes de Pago',
+            'res_model': 'account.move',
+            'view_mode': 'tree,form',
+            'domain': [
+                ('residencia_id', '=', self.id),
+                ('move_type', '=', 'out_invoice'),
+                ('state', '=', 'posted'),
+                ('amount_residual', '>', 0),
+            ],
+        }
+
+    def action_ver_pagos(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Pagos Realizados',
+            'res_model': 'account.payment',
+            'view_mode': 'tree,form',
+            'domain': [
+                ('residencia_id', '=', self.id),
+                ('state', '=', 'posted'),
+                ('payment_type', '=', 'inbound'),
+            ],
+        }
 
     def action_ver_contadores(self):
         self.ensure_one()

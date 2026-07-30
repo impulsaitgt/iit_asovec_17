@@ -34,6 +34,9 @@
                 <sheet>
                     <field name="contador_count" invisible="1" />
                     <field name="lectura_count" invisible="1" />
+                    <field name="movimiento_count" invisible="1" />
+                    <field name="cargo_pendiente_count" invisible="1" />
+                    <field name="pago_count" invisible="1" />
 
                     <div class="oe_button_box" name="button_box">
                         <button type="object" name="action_ver_contadores" class="oe_stat_button"
@@ -43,6 +46,18 @@
                         <button type="object" name="action_ver_lecturas" class="oe_stat_button"
                             icon="fa-list">
                             <field name="lectura_count" widget="statinfo" string="Lecturas" />
+                        </button>
+                        <button type="object" name="action_ver_movimientos" class="oe_stat_button"
+                            icon="fa-exchange">
+                            <field name="movimiento_count" widget="statinfo" string="Movimientos" />
+                        </button>
+                        <button type="object" name="action_ver_cargos_pendientes" class="oe_stat_button"
+                            icon="fa-exclamation-triangle">
+                            <field name="cargo_pendiente_count" widget="statinfo" string="Cargos Pendientes" />
+                        </button>
+                        <button type="object" name="action_ver_pagos" class="oe_stat_button"
+                            icon="fa-money">
+                            <field name="pago_count" widget="statinfo" string="Pagos" />
                         </button>
                     </div>
                     <group>

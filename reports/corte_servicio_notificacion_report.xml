@@ -30,6 +30,11 @@
 
   <!-- Card reutilizable: un aviso individual (media carta). Se apilan 2 por hoja. -->
   <template id="corte_servicio_carta_card">
+    <style>
+      /* Cada Enter en el editor Html crea un párrafo con margen por defecto
+         del navegador; sin esto se ve un salto enorme entre líneas. */
+      .leyenda_corte p { margin: 0; }
+    </style>
     <div style="border: 1px dashed #999; border-radius: 4px; padding: 10px 14px; height: 100%; box-sizing: border-box; overflow: hidden; font-size: 11px; line-height:1.35;">
       <table style="width:100%; margin-bottom:8px; border-collapse:collapse;">
         <tr>
@@ -83,6 +88,10 @@
       </div>
 
       <div style="text-align:center; font-weight:bold; margin-top:10px;">JUNTA DIRECTIVA</div>
+
+      <div t-if="carta['leyenda']" class="leyenda_corte" style="margin-top:6px; font-size:9px; line-height:1.2; text-align:center;">
+        <t t-out="carta['leyenda']" />
+      </div>
     </div>
   </template>
 
