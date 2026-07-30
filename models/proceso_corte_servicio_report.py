@@ -41,6 +41,7 @@ class ReportCorteServicioNotificacion(models.AbstractModel):
                 "dias_habiles_corte": linea.dias_habiles_corte,
                 "company": company,
                 "logo": logos_cache[company.id],
+                "leyenda": linea.proyecto_aso_id.leyenda_notificacion_corte,
             })
         return cartas
 

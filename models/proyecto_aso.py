@@ -20,6 +20,11 @@ class ProyectoAso(models.Model):
         default="<p>Cualquier consulta relacionada</p>",
         help="Texto que se muestra en el recibo mensual de las residencias, en lugar de 'Cualquier consulta relacionada'.",
     )
+    leyenda_notificacion_corte = fields.Html(
+        string="Leyenda de Notificación de Corte",
+        sanitize=True,
+        help="Texto que se imprime debajo de 'JUNTA DIRECTIVA' en el formato de Notificación de Corte de Servicio.",
+    )
     dia_tentativo_carga = fields.Integer(
         string="Día tentativo de carga de datos",
         default=6,

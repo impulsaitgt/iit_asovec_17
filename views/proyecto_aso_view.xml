@@ -46,6 +46,9 @@
                     <group>
                         <field name="leyenda_recibo" widget="html" />
                     </group>
+                    <group>
+                        <field name="leyenda_notificacion_corte" widget="html" />
+                    </group>
                 </sheet>
             </form>
         </field>
