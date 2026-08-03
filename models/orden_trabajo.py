@@ -39,7 +39,7 @@ class OrdenTrabajo(models.Model):
              "de contador.",
     )
     colaborador_id = fields.Many2one(
-        "res.users", string="Colaborador",
+        "hr.employee", string="Colaborador",
         help="Personal de campo asignado para ejecutar la orden.",
     )
 

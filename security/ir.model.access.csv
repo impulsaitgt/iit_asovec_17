@@ -103,6 +103,9 @@ accesos_proceso_corte_servicio_wizard_line_secretaria_asociacion,Acceso a Notifi
 accesos_orden_trabajo_administrador,Acceso a Ordenes de Trabajo,model_asovec_orden_trabajo,asovec_group_administrador,1,1,1,1
 accesos_orden_trabajo_administracion_asociacion,Acceso a Ordenes de Trabajo (Administracion Asociacion),model_asovec_orden_trabajo,asovec_group_administracion_asociacion,1,1,1,1
 accesos_orden_trabajo_secretaria_asociacion,Acceso a Ordenes de Trabajo (Secretaria Asociacion),model_asovec_orden_trabajo,asovec_group_secretaria_asociacion,1,1,1,1
+accesos_hr_employee_asovec_administrador,Lectura Empleados (Administrador Asociacion),hr.model_hr_employee,asovec_group_administrador,1,0,0,0
+accesos_hr_employee_asovec_administracion_asociacion,Lectura Empleados (Administracion Asociacion),hr.model_hr_employee,asovec_group_administracion_asociacion,1,0,0,0
+accesos_hr_employee_asovec_secretaria_asociacion,Lectura Empleados (Secretaria Asociacion),hr.model_hr_employee,asovec_group_secretaria_asociacion,1,0,0,0
 accesos_convenio_wizard_administrador,Acceso a Convenio wizard,model_asovec_convenio_wizard,asovec_group_administrador,1,1,1,1
 accesos_convenio_wizard_administracion_asociacion,Acceso a Convenio wizard (Administracion Asociacion),model_asovec_convenio_wizard,asovec_group_administracion_asociacion,1,1,1,1
 accesos_convenio_wizard_secretaria_asociacion,Acceso a Convenio wizard (Secretaria Asociacion),model_asovec_convenio_wizard,asovec_group_secretaria_asociacion,1,1,1,1

@@ -6,9 +6,9 @@
     """,
     'author':'Alexander Paiz',
     'category': 'General',
-    'version' : '1.0.4',
+    'version' : '1.0.5',
     'depends': [
-        'base', 'product', 'account'
+        'base', 'product', 'account', 'hr'
     ],
     'external_dependencies': {
         'python': ['xlsxwriter'],
