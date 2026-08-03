@@ -48,7 +48,7 @@
                 <field name="cliente_id" string="Nombre" readonly="1" />
                 <field name="direccion" readonly="1" />
                 <field name="telefono" readonly="1" />
-                <field name="colaborador_id" />
+                <field name="colaborador_id" options="{'no_create': True}" />
               </group>
             </group>
             <separator string="Concepto" />
