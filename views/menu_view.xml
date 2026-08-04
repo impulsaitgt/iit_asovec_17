@@ -180,6 +180,8 @@
         action="account.action_move_out_invoice_type" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
     <menuitem name="Pagos" id="pagos_opcion" parent="movimientos_menu"
         action="account.action_account_payments" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
+    <menuitem name="Notas de Crédito" id="notas_credito_opcion" parent="movimientos_menu" sequence="20"
+        action="account.action_move_out_refund_type" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion"/>
     <!-- Va directo al wizard (target=new): crear un cargo de Convenio siempre pasa
          por ahí, nunca por un formulario de factura suelto ni por una lista. -->
     <menuitem name="Convenio" id="movimientos_convenio_opcion" parent="movimientos_menu" sequence="30"
