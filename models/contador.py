@@ -692,7 +692,13 @@ class ContadorLine(models.Model):
             cobro_base = float(residencia.cobro_base_especial_valor or 0.0)
         else:
             cobro_base = float(getattr(proyecto, 'cobro_base', 0.0) or 0.0) if proyecto else 0.0
-        precio_maestro = float(getattr(proyecto, 'precio_metro', 0.0) or 0.0) if proyecto else 0.0
+        # El "precio metro exceso" sigue en vivo el valor del proyecto, salvo que la
+        # residencia tenga marcado su propio "Precio metro exceso propio": en ese caso se usa
+        # el valor guardado en la residencia, independiente de lo que tenga el proyecto.
+        if residencia and residencia.precio_metro_especial:
+            precio_maestro = float(residencia.precio_metro_especial_valor or 0.0)
+        else:
+            precio_maestro = float(getattr(proyecto, 'precio_metro', 0.0) or 0.0) if proyecto else 0.0
         # El "metro base (derecho)" sigue en vivo el valor del proyecto, salvo que la
         # residencia tenga marcado su propio metro base ("Metro base propio"): en ese caso
         # se usa el valor guardado en la residencia, independiente de lo que tenga el proyecto.

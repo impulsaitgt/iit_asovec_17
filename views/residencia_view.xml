@@ -63,7 +63,7 @@
                     <group>
                         <field name="name" placeholder="Nombre/Codigo" />
                     </group>
-                    <group>
+                    <group col="3">
                         <group>
                             <field name="direccion" placeholder="Direccion" />
                             <field name="direccion_real" readonly="1" />
@@ -77,13 +77,18 @@
                             <field name="activo" readonly="sin_contador" />
                             <field name="no_paga_servicios" />
                             <field name="sin_contador" readonly="no_paga_servicios" />
+                        </group>
+                        <group>
+                            <field name="currency_id" invisible="1" />
                             <field name="metros_especiales" />
                             <field name="metros_especiales_cantidad"
                                 readonly="not metros_especiales" />
-                            <field name="currency_id" invisible="1" />
                             <field name="cobro_base_especial" />
                             <field name="cobro_base_especial_valor"
                                 readonly="not cobro_base_especial" />
+                            <field name="precio_metro_especial" />
+                            <field name="precio_metro_especial_valor"
+                                readonly="not precio_metro_especial" />
                             <field name="exonera_exceso_agua" />
                         </group>
                     </group>
@@ -131,6 +136,8 @@
                 <field name="metros_especiales_cantidad" optional="hide" />
                 <field name="cobro_base_especial" optional="hide" />
                 <field name="cobro_base_especial_valor" optional="hide" />
+                <field name="precio_metro_especial" optional="hide" />
+                <field name="precio_metro_especial_valor" optional="hide" />
             </tree>
         </field>
     </record>
@@ -182,6 +189,13 @@
 
                 <separator />
 
+                <filter string="Precio metro exceso propio" name="con_precio_metro_propio"
+                    domain="[('precio_metro_especial','=',True)]" />
+                <filter string="Precio metro exceso de proyecto" name="sin_precio_metro_propio"
+                    domain="[('precio_metro_especial','=',False)]" />
+
+                <separator />
+
                 <!-- Group By -->
                 <group expand="0" string="Agrupar por">
                     <filter string="Proyecto" name="group_proyecto"
@@ -198,6 +212,8 @@
                         context="{'group_by':'metros_especiales'}" />
                     <filter string="Canon de agua propio" name="group_cobro_base_especial"
                         context="{'group_by':'cobro_base_especial'}" />
+                    <filter string="Precio metro exceso propio" name="group_precio_metro_especial"
+                        context="{'group_by':'precio_metro_especial'}" />
                 </group>
             </search>
         </field>

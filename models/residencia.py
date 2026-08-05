@@ -79,6 +79,20 @@ class Residencia(models.Model):
              "lectura registre metros por encima del derecho base, el exceso y su cobro se "
              "asignan en cero y no se genera la línea de exceso en el cargo.",
     )
+    precio_metro_especial = fields.Boolean(
+        string='Precio metro exceso propio',
+        default=False,
+        help="Si se marca, esta residencia usa su propio 'Precio metro exceso (valor propio)' "
+             "en vez del 'Precio Metro' configurado en el proyecto.",
+    )
+    precio_metro_especial_valor = fields.Monetary(
+        string='Precio metro exceso (valor propio)',
+        currency_field="currency_id",
+        default=0,
+        help="Valor de precio por metro en exceso propio de esta residencia. Por defecto "
+             "sigue al del proyecto; si se marca 'Precio metro exceso propio' se puede definir "
+             "uno distinto para esta residencia.",
+    )
 
     @api.depends('direccion', 'calle', 'no_casa', 'proyecto_aso_id.name')
     def _compute_direccion_real(self):
@@ -115,6 +129,11 @@ class Residencia(models.Model):
         if not self.cobro_base_especial:
             self.cobro_base_especial_valor = self.proyecto_aso_id.cobro_base if self.proyecto_aso_id else 0
 
+    @api.onchange('precio_metro_especial')
+    def _onchange_precio_metro_especial(self):
+        if not self.precio_metro_especial:
+            self.precio_metro_especial_valor = self.proyecto_aso_id.precio_metro if self.proyecto_aso_id else 0
+
     @api.onchange('proyecto_aso_id')
     def _onchange_proyecto_aso_id_metro_base(self):
         for rec in self:
@@ -122,6 +141,8 @@ class Residencia(models.Model):
                 rec.metros_especiales_cantidad = rec.proyecto_aso_id.metro_base if rec.proyecto_aso_id else 0
             if not rec.cobro_base_especial:
                 rec.cobro_base_especial_valor = rec.proyecto_aso_id.cobro_base if rec.proyecto_aso_id else 0
+            if not rec.precio_metro_especial:
+                rec.precio_metro_especial_valor = rec.proyecto_aso_id.precio_metro if rec.proyecto_aso_id else 0
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -129,12 +150,15 @@ class Residencia(models.Model):
             if vals.get('proyecto_aso_id') and (
                 (not vals.get('metros_especiales') and 'metros_especiales_cantidad' not in vals)
                 or (not vals.get('cobro_base_especial') and 'cobro_base_especial_valor' not in vals)
+                or (not vals.get('precio_metro_especial') and 'precio_metro_especial_valor' not in vals)
             ):
                 proyecto = self.env['asovec.proyecto_aso'].browse(vals['proyecto_aso_id'])
                 if not vals.get('metros_especiales') and 'metros_especiales_cantidad' not in vals:
                     vals['metros_especiales_cantidad'] = proyecto.metro_base
                 if not vals.get('cobro_base_especial') and 'cobro_base_especial_valor' not in vals:
                     vals['cobro_base_especial_valor'] = proyecto.cobro_base
+                if not vals.get('precio_metro_especial') and 'precio_metro_especial_valor' not in vals:
+                    vals['precio_metro_especial_valor'] = proyecto.precio_metro
 
             if vals.get('no_paga_servicios'):
                 vals['sin_contador'] = False
