@@ -25,28 +25,28 @@
               t-att-src="image_data_uri(rec['logo'])"
               style="max-height: 36px; max-width: 80px;" alt="Logo" />
           </td>
-          <td style="vertical-align:middle; padding:0 0 0 10px; text-align:left; font-size: 15px; font-weight: bold;">
+          <td style="vertical-align:middle; padding:0 0 0 10px; text-align:left; font-size: 22px; font-weight: bold;">
             <span t-esc="rec['proyecto'] and rec['proyecto'].name or ''" />
           </td>
           <td style="width:1%; white-space:nowrap; vertical-align:middle; text-align:right; padding:0;">
             <span t-if="rec['move_state_label']"
-              t-attf-style="display:inline-block; font-size:7px; font-weight:bold; color:#fff; padding:2px 6px; border-radius:8px; margin-left:3px; background-color:#{rec['move_state_color']};"
+              t-attf-style="display:inline-block; font-size:10px; font-weight:bold; color:#fff; padding:2px 6px; border-radius:8px; margin-left:3px; background-color:#{rec['move_state_color']};"
               t-esc="rec['move_state_label']" />
             <span t-if="rec['payment_label']"
-              t-attf-style="display:inline-block; font-size:7px; font-weight:bold; color:#fff; padding:2px 6px; border-radius:8px; margin-left:3px; background-color:#{rec['payment_color']};"
+              t-attf-style="display:inline-block; font-size:10px; font-weight:bold; color:#fff; padding:2px 6px; border-radius:8px; margin-left:3px; background-color:#{rec['payment_color']};"
               t-esc="rec['payment_label']" />
           </td>
         </tr>
       </table>
 
-      <div style="font-size: 10px; line-height:1.25; margin-bottom: 4px;">
+      <div style="font-size: 16px; line-height:1.4; margin-bottom: 6px;">
         <div><strong>Vecino:</strong> <span t-esc="rec['vecino']" /></div>
-        <div><strong>Cuenta:</strong> <span t-esc="rec['cuenta']" /></div>
-        <div><strong>Dirección:</strong> <span t-esc="rec['direccion']" /></div>
+        <div><strong>Cuenta:</strong> <strong t-esc="rec['cuenta']" /></div>
+        <div><strong>Dirección:</strong> <strong t-esc="rec['direccion']" /></div>
         <div><strong>Período:</strong> <span t-esc="rec['periodo']" /></div>
       </div>
 
-      <table class="table table-sm" style="width:100%; margin-bottom:4px; font-size: 8.5px; table-layout: fixed;">
+      <table class="table table-sm" style="width:100%; margin-bottom:6px; font-size: 14px; table-layout: fixed;">
         <thead>
           <tr style="background-color:#009999; color:#ffffff;">
             <th style="width:16.6%; text-align:center; padding: 2px 3px; color:#ffffff;">Lect. anterior</th>
@@ -85,7 +85,7 @@
         </tbody>
       </table>
 
-      <div class="recibo_leyenda" style="font-size: 9px; line-height:1.2; margin-bottom: 4px;">
+      <div class="recibo_leyenda" style="font-size: 13px; line-height:1.35; margin-bottom: 6px;">
         <t t-if="rec['leyenda']">
           <t t-out="rec['leyenda']" />
         </t>
@@ -94,12 +94,12 @@
         </t>
       </div>
 
-      <div t-if="rec['fecha_pago_disponible']" style="font-size: 9px; margin-bottom: 2px;">
+      <div t-if="rec['fecha_pago_disponible']" style="font-size: 13px; margin-bottom: 2px;">
         <strong>Puede realizar su pago a partir de</strong>
         <span t-esc="rec['fecha_pago_disponible']" t-options="{'widget': 'date'}" />
       </div>
 
-      <div style="font-size: 8px; color: #666; text-align:right;">
+      <div style="font-size: 11px; color: #666; text-align:right;">
         Generado el
         <span t-esc="fecha_generacion" t-options="{'widget': 'date'}" />
         <span t-if="rec['tiene_exceso']" style="color:#c62828; font-weight:bold;">(Exceso)</span>
