@@ -281,6 +281,7 @@ class ReportEstadoCuenta(models.AbstractModel):
             "direcciones": ", ".join(filter(None, residencias.mapped("direccion_real"))),
             "cliente": wizard.cliente_id,
             "solo_residente_actual": wizard.solo_residente_actual,
+            "excluir_cargos_mes_actual": wizard.excluir_cargos_mes_actual,
             "generated_at": generated_at_dt.strftime("%d/%m/%Y %H:%M"),
             "movimientos": movimientos,
             "resumen": resumen,

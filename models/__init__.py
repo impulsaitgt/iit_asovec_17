@@ -31,3 +31,4 @@ from . import proceso_corte_servicio_report
 from . import orden_trabajo
 from . import orden_trabajo_report
 from . import convenio_wizard
+from . import cambio_contador_wizard

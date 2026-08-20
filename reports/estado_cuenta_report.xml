@@ -45,6 +45,7 @@
                 están reflejados.
               </t>
               <t t-if="solo_residente_actual"> Se muestran únicamente los movimientos del residente actual.</t>
+              <t t-if="excluir_cargos_mes_actual"> No se incluyen cargos con detalle de cobro del mes en curso.</t>
               <t t-if="resumen['cantidad_sin_aplicar']"> <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#c62828;"></span> Pago no conciliado a ningún cargo (crédito a favor).</t>
             </div>
 
@@ -132,6 +133,49 @@
                 </tr>
               </table>
             </div>
+
+            <t t-foreach="historial_lecturas" t-as="bloque">
+              <h3 style="margin-top: 20px; margin-bottom: 6px; font-size: 13px;">
+                Historial de Lecturas
+                <t t-if="len(residencias) &gt; 1"> — <span t-esc="bloque['residencia'].display_name"/></t>
+                <t t-if="lecturas_periodo_activo"> — Período <span t-esc="periodo_label"/></t>
+              </h3>
+              <table class="table table-sm o_main_table" style="width:100%; border-collapse: collapse;">
+                <thead>
+                  <tr>
+                    <th>Período</th>
+                    <th class="text-end">Lectura</th>
+                    <th class="text-end">Lectura anterior</th>
+                    <th class="text-end">Consumo</th>
+                    <th class="text-end">Canon de agua</th>
+                    <th class="text-end">Exceso (pago extra)</th>
+                    <th class="text-end">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <t t-foreach="bloque['lineas']" t-as="ln">
+                    <t t-set="lsym" t-value="(ln.currency_id and ln.currency_id.symbol) or cur_symbol"/>
+                    <tr>
+                      <td>
+                        <t t-if="ln.es_inicial">Registro Inicial</t>
+                        <t t-else="">
+                          <span t-esc="dict(ln._fields['mes'].selection).get(ln.mes, ln.mes)"/> <span t-esc="ln.anio"/>
+                        </t>
+                      </td>
+                      <td class="text-end"><span t-esc="'{:,.2f}'.format(ln.lectura or 0.0)"/></td>
+                      <td class="text-end"><span t-esc="'{:,.2f}'.format(ln.lectura_anterior or 0.0)"/></td>
+                      <td class="text-end"><span t-esc="'{:,.2f}'.format(ln.consumo or 0.0)"/></td>
+                      <td class="text-end"><span t-esc="('%s %s' % (lsym, '{:,.2f}'.format(ln.base or 0.0))).strip()"/></td>
+                      <td class="text-end"><span t-esc="('%s %s' % (lsym, '{:,.2f}'.format(ln.pago_extra or 0.0))).strip()"/></td>
+                      <td class="text-end"><strong t-esc="('%s %s' % (lsym, '{:,.2f}'.format(ln.pago_total or 0.0))).strip()"/></td>
+                    </tr>
+                  </t>
+                  <t t-if="not bloque['lineas']">
+                    <tr><td colspan="7" style="text-align:center;">Sin lecturas registradas.</td></tr>
+                  </t>
+                </tbody>
+              </table>
+            </t>
 
           </div>
 

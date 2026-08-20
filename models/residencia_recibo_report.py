@@ -24,23 +24,10 @@ class ReportReciboResidenciaMensual(models.AbstractModel):
 
     @api.model
     def _get_fecha_pago_disponible(self, lectura, proyecto):
-        """Fecha a partir de la cual se puede pagar el recibo:
-        - Si el cobro mensual de ese proyecto/mes/año ya fue confirmado, se usa la fecha
-          en la que se confirmó.
-        - Si no, se usa el día tentativo de carga configurado en el proyecto, del mes
-          siguiente al de la lectura.
+        """Fecha a partir de la cual se puede pagar el recibo: el día tentativo de
+        carga configurado en el proyecto, del mes siguiente al de la lectura (por
+        ejemplo, lectura de agosto con día tentativo 6 -> 6 de septiembre).
         """
-        mes_padded = str(lectura.mes or "").zfill(2)
-        cobro = self.env["asovec.proyecto_cobro_mensual"].search([
-            ("proyecto_aso_id", "=", proyecto.id),
-            ("month", "=", mes_padded),
-            ("year", "=", lectura.anio),
-            ("state", "!=", "cancel"),
-        ], limit=1)
-
-        if cobro and cobro.state == "posted" and cobro.fecha_confirmacion:
-            return cobro.fecha_confirmacion
-
         mes_siguiente = int(lectura.mes) + 1
         anio_siguiente = lectura.anio
         if mes_siguiente > 12:

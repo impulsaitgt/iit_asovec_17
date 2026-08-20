@@ -21,6 +21,7 @@
         'views/residencia_view.xml',
         'views/tipo_servicio_aso_view.xml',
         'views/contador_view.xml',
+        'views/cambio_contador_wizard_view.xml',
         'views/lectura_operador_wizard_view.xml',
         'views/proyecto_cobro_mensual_view.xml',
         'views/product_template_view.xml',

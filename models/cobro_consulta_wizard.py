@@ -46,6 +46,15 @@ class CobroMensualConsultaWizard(models.TransientModel):
     )
     solo_residente_actual = fields.Boolean(string="Solo movimientos del residente actual", default=True)
 
+    excluir_cargos_mes_actual = fields.Boolean(
+        string="No incluir cargos del mes por lecturas del mes actual",
+        default=True,
+        help="Excluye del Estado de Cuenta los cargos que tengan un registro de "
+             "detalle de cobro (Cobro Mensual) del mes en curso, ya que normalmente "
+             "todavía no están confirmados ni son cobrables. Desmárquelo para "
+             "incluirlos también.",
+    )
+
     filtrar_por_periodo = fields.Boolean(
         string="Filtrar por Período",
         default=False,
@@ -151,6 +160,13 @@ class CobroMensualConsultaWizard(models.TransientModel):
         ]
         if self.solo_residente_actual and self.cliente_id:
             domain.append(("cliente_id", "=", self.cliente_id.id))
+        if self.excluir_cargos_mes_actual:
+            hoy = fields.Date.context_today(self)
+            domain += [
+                "|",
+                ("month", "!=", str(hoy.month).zfill(2)),
+                ("year", "!=", hoy.year),
+            ]
 
         return self.env["asovec.proyecto_cobro_mensual_line"].search(domain, order="year, month, id")
 
@@ -194,6 +210,9 @@ class CobroMensualConsultaWizard(models.TransientModel):
         row = 3
         if datos["periodo_activo"]:
             worksheet.write(row, 0, "Período: %s" % datos["periodo_label"], fmt_subtitulo)
+            row += 1
+        if datos["excluir_cargos_mes_actual"]:
+            worksheet.write(row, 0, "No se incluyen cargos con detalle de cobro del mes en curso.", fmt_subtitulo)
             row += 1
         if datos["resumen"]["cantidad_sin_aplicar"]:
             worksheet.write_rich_string(row, 0, fmt_dot, "●", "  Pago no conciliado a ningún cargo (crédito a favor).", fmt_subtitulo)
