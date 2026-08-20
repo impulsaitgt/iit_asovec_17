@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- Formato de papel Oficio (216 x 330 mm) con márgenes mínimos para que quepan 4 recibos -->
+  <!-- Formato de papel Oficio (216 x 330 mm) con márgenes mínimos para que quepan 3 recibos -->
   <record id="paperformat_oficio_recibos" model="report.paperformat">
-    <field name="name">Oficio - Recibos (4 por hoja)</field>
+    <field name="name">Oficio - Recibos (3 por hoja)</field>
     <field name="format">custom</field>
     <field name="page_height">330</field>
     <field name="page_width">216</field>
@@ -28,7 +28,7 @@
     <field name="paperformat_id" ref="paperformat_oficio_recibos" />
   </record>
 
-  <!-- Template: 4 recibos por hoja (oficio), en franjas horizontales apiladas (una debajo de
+  <!-- Template: 3 recibos por hoja (oficio), en franjas horizontales apiladas (una debajo de
        otra, cada una ocupando todo el ancho de la hoja), reutilizando la misma card del reporte
        individual. Cada hoja es su propio "article" (documento independiente): así wkhtmltopdf
        procesa el PDF hoja por hoja en vez de armar un solo bloque gigante con todas las hojas
@@ -39,8 +39,8 @@
         <div class="article">
           <div t-attf-style="#{'' if pagina_last else 'page-break-after: always;'}">
             <table style="width:206mm; height:320mm; border-collapse:separate; border-spacing:0 4mm; table-layout:fixed;">
-              <tr t-foreach="[0, 1, 2, 3]" t-as="slot">
-                <td style="height:25%; vertical-align:top; padding:0;">
+              <tr t-foreach="[0, 1, 2]" t-as="slot">
+                <td style="height:33.33%; vertical-align:top; padding:0;">
                   <t t-set="rec" t-value="pagina[slot] if len(pagina) > slot else False" />
                   <t t-if="rec">
                     <t t-call="iit_asovec.recibo_residencia_lectura_card" />

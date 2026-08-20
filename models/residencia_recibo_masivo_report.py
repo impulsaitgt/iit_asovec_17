@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 
-RECIBOS_POR_HOJA = 4
+RECIBOS_POR_HOJA = 3
 
 
 class ReportReciboResidenciaMensualMasivo(models.AbstractModel):
     _name = "report.iit_asovec.report_recibo_residencia_mensual_masivo"
-    _description = "Recibos Mensuales por Proyecto (Proceso Masivo, 4 por hoja)"
+    _description = "Recibos Mensuales por Proyecto (Proceso Masivo, 3 por hoja)"
 
     @api.model
     def _get_report_values(self, docids, data=None):
