@@ -186,6 +186,7 @@
                         movimientos (cargos y pagos aplicados) con saldo acumulado, hasta ese momento;
                         movimientos posteriores a esta fecha y hora no están reflejados aquí.
                         <t t-if="solo_residente_actual"> Se muestran únicamente los movimientos del residente actual.</t>
+                        <t t-if="excluir_cargos_mes_actual"> No se incluyen cargos con detalle de cobro del mes en curso.</t>
                         <t t-if="periodo_activo">
                             Filtrado al período <strong t-esc="periodo_label" />: los Movimientos muestran
                             solo ese mes, con Saldo Inicial y Saldo Final.

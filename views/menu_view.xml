@@ -154,6 +154,9 @@
         action="contador_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_temporal_implementacion" />
     <menuitem name="Lecturas de Contador" id="contador_line_opcion" parent="contadores_menu"
         action="contador_line_action" groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion,asovec_group_temporal_implementacion" />
+    <menuitem name="Cambio de Contador" id="cambio_contador_wizard_opcion" parent="contadores_menu"
+        action="cambio_contador_wizard_action" sequence="30"
+        groups="asovec_group_administrador,asovec_group_administracion_asociacion,asovec_group_secretaria_asociacion" />
 
     <!-- Sección para el trabajo de campo (rol operador de lecturas), anidada al final
          de "Contadores" (en vez de menú propio a nivel superior): mantiene un nombre
