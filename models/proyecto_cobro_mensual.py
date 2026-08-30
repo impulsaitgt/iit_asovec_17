@@ -634,12 +634,26 @@ class ProyectoCobroMensual(models.Model):
     # Acciones
     # --------------------
     # Generar en un solo click TODAS las residencias de un proyecto grande puede exceder
-    # el tiempo límite de una petición web (los commits intermedios no evitan que la
-    # petición completa se corte a la mitad). Por eso cada click de "Completar Faltantes"
+    # el tiempo límite de una petición web. Por eso cada click de "Completar Faltantes"
     # procesa como máximo un lote de este tamaño y devuelve una notificación con el
     # avance: el usuario simplemente vuelve a presionar el botón hasta terminar, sin que
     # nunca se muestre un error de tiempo agotado.
+    #
+    # Bajado de 150 a 40 el 2026-08-30, y vuelto a subir a 150 el mismo día una vez
+    # arreglada la causa raíz (ver account_payment.py: _compute_residencia_id). El
+    # supuesto de ~0.3s/residencia dejó de cumplirse brevemente porque ese compute
+    # dependía de reconciled_invoice_ids (campo no-almacenado de account.payment): cada
+    # creación/borrado de un account.move con residencia_id caía a un fallback lento
+    # proporcional a la cantidad de account.payment de la base (~1.3-2.3s/residencia en
+    # asogua_pruebas con 1581 pagos, superando el límite de 120s del servidor). Con el
+    # depends corregido a una cadena almacenada/indexada, el costo real vuelve a ~0.3s.
     _GENERATE_CHUNK_SIZE = 150
+
+    # Cada esta cantidad de residencias generadas dentro del lote se hace un commit real
+    # (no solo al terminar el lote o al fallar): si el proceso igual se corta por el
+    # límite de tiempo del servidor a mitad de un lote grande, lo ya generado hasta ese
+    # commit queda guardado en vez de perderse por completo.
+    _GENERATE_COMMIT_EVERY = 10
 
     def _residencias_pendientes_generar(self, solo_inactivas=False):
         """Residencias del proyecto que todavía no tienen cargo, o cuyo cargo quedó
@@ -730,6 +744,8 @@ class ProyectoCobroMensual(models.Model):
                     productos_especiales=productos_especiales,
                 )
                 generados += 1
+                if generados % self._GENERATE_COMMIT_EVERY == 0:
+                    self.env.cr.commit()
         except Exception as e:
             self.env.cr.commit()
             raise UserError(_(
@@ -751,10 +767,17 @@ class ProyectoCobroMensual(models.Model):
         message = _("Se generaron las %s residencias pendientes. ¡Completo!") % generados
         return self._notificar_y_reabrir(message, notif_type="success")
 
-    # ~80s observados para 266 residencias en pruebas reales (~0.3s c/u). Con 150 por
-    # tanda quedan ~45-50s por click, con margen bajo el límite de 120s del servidor
-    # (limit_time_real) incluso para proyectos grandes (568 residencias = 4 clicks).
+    # ~80s observados originalmente para 266 residencias (~0.3s c/u). Ver el comentario de
+    # _GENERATE_CHUNK_SIZE (misma causa raíz, mismo motor _generar_cargo_residencia) sobre
+    # el viaje de 150 a 40 y de vuelta a 150 el 2026-08-30.
     _REGENERAR_CARGOS_CHUNK_SIZE = 150
+
+    # Cada esta cantidad de residencias procesadas dentro de la tanda se avanza el cursor
+    # y se hace un commit real: si el proceso se corta por el límite de tiempo del
+    # servidor a mitad de la tanda, lo ya regenerado hasta ese commit no se pierde (antes
+    # solo se comiteaba al terminar toda la tanda, así que un corte a mitad de camino
+    # descartaba TODO lo procesado en ese click, no solo dejaba pendiente el resto).
+    _REGENERAR_CARGOS_COMMIT_EVERY = 10
 
     def action_regenerar_cargos(self):
         """Regenera (borra y vuelve a crear) el cargo de las residencias de este cobro
@@ -801,19 +824,26 @@ class ProyectoCobroMensual(models.Model):
         regenerados = 0
         saltados = 0
         fallidos = []
+        procesados_desde_commit = 0
         for residencia, lectura, move in a_procesar:
             if move and move.state == "posted":
                 saltados += 1
-                continue
-            try:
-                with self.env.cr.savepoint():
-                    self._generar_cargo_residencia(
-                        residencia, lectura=lectura, journal=journal,
-                        servicios=servicios, productos_especiales=productos_especiales,
-                    )
-                regenerados += 1
-            except Exception as e:
-                fallidos.append(_("%s: %s") % (residencia.display_name, str(e)))
+            else:
+                try:
+                    with self.env.cr.savepoint():
+                        self._generar_cargo_residencia(
+                            residencia, lectura=lectura, journal=journal,
+                            servicios=servicios, productos_especiales=productos_especiales,
+                        )
+                    regenerados += 1
+                except Exception as e:
+                    fallidos.append(_("%s: %s") % (residencia.display_name, str(e)))
+
+            procesados_desde_commit += 1
+            if procesados_desde_commit >= self._REGENERAR_CARGOS_COMMIT_EVERY:
+                self.regenerar_cargos_cursor = residencia.id
+                self.env.cr.commit()
+                procesados_desde_commit = 0
 
         restantes = Line.search_count([
             ("cobro_id", "=", self.id),
