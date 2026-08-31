@@ -613,7 +613,14 @@ class ProyectoCobroMensual(models.Model):
             "journal_id": journal.id,
             "partner_id": residencia.cliente_id.id,
             "residencia_id": residencia.id,
-            "invoice_date": fields.Date.context_today(self),
+            # Fecha de toma de lectura (create_date de la lectura), no la fecha en que se
+            # generó/regeneró el cargo: así la factura queda fechada cuando se leyó el
+            # contador, sin importar cuándo se presionó el botón. Si no hay lectura (p.ej.
+            # residencia inactiva o "sin contador"), se usa hoy como antes.
+            "invoice_date": (
+                fields.Date.context_today(self, lectura.create_date) if lectura
+                else fields.Date.context_today(self)
+            ),
             "invoice_origin": self.name or "",
             "ref": f"{self.name or ''} - {residencia.display_name}",
             "invoice_line_ids": invoice_lines,
