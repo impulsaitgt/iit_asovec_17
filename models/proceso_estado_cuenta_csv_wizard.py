@@ -73,6 +73,27 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
                 por_residencia[move.residencia_id.id] |= move
         return por_residencia
 
+    def _get_moves_sueltos_por_residencia(self, moves_migrados):
+        """Facturas sueltas (p. ej. Cargos Varios) de los diarios seleccionados,
+        agrupadas por residencia: tienen `residencia_id` pero no pertenecen a un cobro
+        mensual (sin proyecto_cobro_mensual_line) ni son deuda migrada, así que las
+        otras dos fuentes no las ven. Se clasifican por `invoice_date`."""
+        Move = self.env["account.move"]
+        moves_cobro = self.env["asovec.proyecto_cobro_mensual_line"].search([
+            ("move_id", "!=", False),
+        ]).mapped("move_id")
+        moves = Move.search([
+            ("journal_id", "in", self.journal_ids.ids),
+            ("state", "=", "posted"),
+            ("move_type", "=", "out_invoice"),
+            ("residencia_id", "!=", False),
+            ("id", "not in", (moves_cobro | moves_migrados).ids),
+        ])
+        por_residencia = defaultdict(lambda: Move)
+        for move in moves:
+            por_residencia[move.residencia_id.id] |= move
+        return por_residencia
+
     def _build_rows(self):
         self.ensure_one()
         if not self.journal_ids:
@@ -85,6 +106,8 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
         CobroLine = self.env["asovec.proyecto_cobro_mensual_line"]
         residencias = self.env["asovec.residencia"].search([], order="proyecto_aso_id, name")
         migradas_por_residencia = self._get_moves_migrados_por_residencia()
+        todas_migradas = self.env["account.move"].union(*migradas_por_residencia.values())
+        sueltas_por_residencia = self._get_moves_sueltos_por_residencia(todas_migradas)
 
         rows = []
         for residencia in residencias:
@@ -107,6 +130,16 @@ class ProcesoEstadoCuentaCsvWizard(models.TransientModel):
                 anteriores_migrado = moves_migrados.filtered(lambda m: m.invoice_date and m.invoice_date < fecha_mes)
                 saldo_mes += sum(del_mes_migrado.mapped("amount_residual"))
                 saldo_anterior += sum(anteriores_migrado.mapped("amount_residual"))
+
+            moves_sueltos = sueltas_por_residencia.get(residencia.id)
+            if moves_sueltos:
+                del_mes_suelto = moves_sueltos.filtered(
+                    lambda m: m.invoice_date
+                    and (m.invoice_date.year, m.invoice_date.month) == (self.anio, mes_int))
+                anteriores_suelto = moves_sueltos.filtered(
+                    lambda m: m.invoice_date and m.invoice_date < fecha_mes)
+                saldo_mes += sum(del_mes_suelto.mapped("amount_residual"))
+                saldo_anterior += sum(anteriores_suelto.mapped("amount_residual"))
 
             rows.append([
                 residencia.name,
