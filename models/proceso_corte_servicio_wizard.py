@@ -36,9 +36,9 @@ class ProcesoCorteServicioWizard(models.TransientModel):
     mes = fields.Selection(MONTH_SELECTION, string="Mes", required=True)
     anio = fields.Integer(string="Año", required=True)
     meses_atraso = fields.Integer(
-        string="Meses de atraso mínimo", required=True, default=2,
+        string="Meses de atraso", required=True, default=2,
         help="Solo se listan residencias cuya deuda impaga viene acumulándose desde "
-             "hace al menos esta cantidad de meses, contados hacia atrás desde el mes "
+             "hace exactamente esta cantidad de meses (ni más ni menos), contados hacia atrás desde el mes "
              "seleccionado (usando la fecha de creación de cada cargo, no su período "
              "contable ni la fecha de pago).",
     )
@@ -113,7 +113,7 @@ class ProcesoCorteServicioWizard(models.TransientModel):
     def action_buscar(self):
         self.ensure_one()
         if self.meses_atraso < 1:
-            raise UserError(_("Los meses de atraso mínimo deben ser al menos 1."))
+            raise UserError(_("Los meses de atraso deben ser al menos 1."))
         if not self.mes or not self.anio:
             raise UserError(_("Seleccione Mes y Año."))
 
@@ -164,7 +164,9 @@ class ProcesoCorteServicioWizard(models.TransientModel):
             periodos = sorted({(y, m) for (y, m, _monto) in periodos_residencia})
             anio_mas_antiguo, mes_mas_antiguo = periodos[0]
             atraso = (anio_ref * 12 + mes_ref) - (anio_mas_antiguo * 12 + mes_mas_antiguo)
-            if atraso < self.meses_atraso:
+            # Solo la cantidad exacta de meses (requerimiento del cliente): una
+            # residencia con más meses de atraso no se lista.
+            if atraso != self.meses_atraso:
                 continue
 
             monto_total = sum(monto for (_y, _m, monto) in periodos_residencia)
