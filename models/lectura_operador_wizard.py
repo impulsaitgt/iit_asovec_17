@@ -241,6 +241,19 @@ class LecturaOperadorWizard(models.TransientModel):
                 "La lectura (%s) no puede ser menor que la lectura anterior (%s)."
             ) % (self.lectura, self.lectura_anterior))
 
+        # Desde el Listado de Residencias por Proyecto, si la lectura genera exceso la
+        # foto es obligatoria. El exceso se recalcula aquí porque `metros_extras` es
+        # readonly sin force_save (no viaja al servidor desde la vista).
+        if self.env.context.get("listado_proyecto_id") and not self.foto:
+            calc = self.env["asovec.contador.lines"]._calcular_campos_linea(
+                self.contador_id, self.lectura or 0.0, self.lectura_anterior or 0.0, es_inicial=False
+            )
+            if (calc.get("metros_extras") or 0.0) > 0:
+                raise UserError(_(
+                    "Esta lectura tiene exceso de consumo (%s m³): debe adjuntar la foto "
+                    "del contador para poder guardarla."
+                ) % calc["metros_extras"])
+
         if self.modo_correccion:
             if not self.line_id:
                 raise UserError(_("No hay ninguna lectura seleccionada para corregir."))

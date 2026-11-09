@@ -129,6 +129,18 @@
             <field name="lectura" position="attributes">
                 <attribute name="autofocus">1</attribute>
             </field>
+            <!-- Desde el listado, si la lectura genera exceso la foto es obligatoria
+                 (evidencia del contador). Se valida también en action_guardar. -->
+            <field name="foto" position="attributes">
+                <attribute name="required">metros_extras &gt; 0</attribute>
+            </field>
+            <field name="foto" position="before">
+                <div class="alert alert-warning text-center" role="alert"
+                    invisible="metros_extras &lt;= 0 or foto">
+                    <strong>📷 Hay exceso de consumo:</strong>
+                    la foto del contador es obligatoria para guardar.
+                </div>
+            </field>
         </field>
     </record>
 
